@@ -39,7 +39,7 @@ private:
 		{
 			Clean();
 			printf("内存分配失败");
-			exit(0);
+			exit(-1);
 		}
 		memset(pBase, 0, szSize);//置零
 	}
@@ -156,7 +156,8 @@ public:
 		else
 		{
 			//报错
-			MyAssert(false, "致命错误：Brainfuck指针尝试向前越界！");
+			printf("致命错误：程序指针尝试向前越界！\n");
+			exit(-1);
 		}
 		return *this;
 	}
