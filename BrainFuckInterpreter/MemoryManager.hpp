@@ -139,6 +139,7 @@ public:
 	{
 		CheckExpand(szMoveSize);//×Ô¶¯À©ÈÝ
 		szIndex += szMoveSize;
+		return *this;
 	}
 
 	MemoryManager &operator-=(size_t szMoveSize)
