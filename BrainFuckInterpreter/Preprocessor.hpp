@@ -5,6 +5,7 @@
 
 #include <cstdio>
 #include <vector>
+#include <cctype>
 
 
 class Preprocessor//预处理器
@@ -13,7 +14,7 @@ private:
 	CodeList listCode{};
 
 	//注意szDupCount需要自行初始化！！！本函数仅递增
-	bool FindDuplicate(FileStream &sFile, const char cFind, size_t& szDupCount)
+	void FindDuplicate(FileStream &sFile, const char cFind, size_t& szDupCount)
 	{
 		while(true)
 		{
@@ -21,14 +22,14 @@ private:
 			sFile.Read(cRead);
 			if (sFile.Eof())
 			{
-				return false;//eof力（悲）
+				return;//返回上级处理
 			}
 
 			//判断是否相同（处理重复字符）
 			if (cRead != cFind)
 			{
 				sFile.MovFilePos(-1);//回退1读取
-				return true;//遇到不同，直接返回
+				return;//遇到不同，直接返回
 			}
 			
 			++szDupCount;//相同继续合并
@@ -36,12 +37,25 @@ private:
 	}
 
 public:
+	void Clear(void)
+	{
+		listCode.clear();
+	}
+
+	const CodeList &GetListCode(void)
+	{
+		return listCode;
+	}
+
+	//如果该函数返回false，那么任何使用listCode进行执行的操作都是未定义行为，当然，读取失败现场是没问题的
 	bool PreprocessInFile(FileStream &sFile)
 	{
-		if (!sFile)
+		if (!sFile)//文件是NULL，返回
 		{
 			return false;
 		}
+
+		Clear();//清理以便读取
 
 		//块语句栈（存储索引）
 		std::vector<size_t> codeBlockStack;
@@ -64,11 +78,7 @@ public:
 					CurCode.enSymbol = CodeUnit::NextMov;
 					CurCode.szMovOffset = 1;
 					//查找重复值
-					if (!FindDuplicate(sFile, cRead, CurCode.szMovOffset))
-					{
-						printf("解析失败：提前遇到文件尾\n");
-						return false;
-					}
+					FindDuplicate(sFile, cRead, CurCode.szMovOffset);
 				}
 				break;
 			case '<':
@@ -76,11 +86,7 @@ public:
 					CurCode.enSymbol = CodeUnit::PrevMov;
 					CurCode.szMovOffset = 1;
 					//查找重复值
-					if (!FindDuplicate(sFile, cRead, CurCode.szMovOffset))
-					{
-						printf("解析失败：提前遇到文件尾\n");
-						return false;
-					}
+					FindDuplicate(sFile, cRead, CurCode.szMovOffset);
 				}
 				break;
 			case '+':
@@ -88,11 +94,7 @@ public:
 					CurCode.enSymbol = CodeUnit::AddCur;
 					CurCode.szCalcValue = 1;
 					//查找重复值
-					if (!FindDuplicate(sFile, cRead, CurCode.szCalcValue))
-					{
-						printf("解析失败：提前遇到文件尾\n");
-						return false;
-					}
+					FindDuplicate(sFile, cRead, CurCode.szCalcValue);
 				}
 				break;
 			case '-':
@@ -100,11 +102,7 @@ public:
 					CurCode.enSymbol = CodeUnit::SubCur;
 					CurCode.szCalcValue = 1;
 					//查找重复值
-					if (!FindDuplicate(sFile, cRead, CurCode.szCalcValue))
-					{
-						printf("解析失败：提前遇到文件尾\n");
-						return false;
-					}
+					FindDuplicate(sFile, cRead, CurCode.szCalcValue);
 				}
 				break;
 			case '.':
@@ -142,11 +140,7 @@ public:
 					//现在，读取所有重复的]，让前面与之配对的所有loopbeg都跳转到重复的最后，而对每个重复的]处理正确配对
 					//这样，减少重复loopend的来回跳转开销与判断开销
 					size_t szDupCount = 0;
-					if (!FindDuplicate(sFile, cRead, szDupCount))
-					{
-						printf("解析失败：提前遇到文件尾\n");
-						return false;
-					}
+					FindDuplicate(sFile, cRead, szDupCount);
 
 					//在此之前，先判断一下szStackTop够不够szDupCount，不够说明括号未配对，报错
 					if (szDupCount > szStackTop)
@@ -187,10 +181,43 @@ public:
 			case '#':
 				{
 					//处理注释
+					//读取，直到换行符
+					bool bCR = false;//\r
+					bool bLF = false;//\n
+					while (true)
+					{
+						char cRead;
+						sFile.Read(cRead);
+						if (sFile.Eof())
+						{
+							break;//离开循环，回到外层判断
+						}
+
+						if (cRead == '\r')
+						{
+							bCR = true;
+						}
+						else if (cRead == '\n')
+						{
+							bLF = true;
+						}
+						else if (bCR || bLF)
+						{
+							sFile.MovFilePos(-1);//回退1字节，退出循环
+							break;
+						}
+					}
+
 				}
 				continue;//注意此处为continue而非break，不走下面默认压入
 			default:
-				//报错：行号字符数
+				if (isspace(cRead))
+				{
+					continue;//跳过空白，直接继续
+				}
+				//其余未知字符且不在注释内，报错
+				
+				//todo报错：行号字符数
 				return false;//注意报错直接返回
 			}
 
@@ -204,6 +231,9 @@ public:
 			printf("解析失败：括号未匹配\n");
 			return false;
 		}
+
+		//完成，尾部插入一个卫兵字符，也就是ProgEnd，执行到代表程序结束
+		listCode.push_back(CodeUnit{ .enSymbol = CodeUnit::ProgEnd });
 		
 		return true;
 	}
