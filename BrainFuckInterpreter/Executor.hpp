@@ -94,17 +94,17 @@ public:
 			break;
 		case CodeUnit::AddCur:
 			{//注意：与内存单元，也就是uint8_t进行运算，能正确进行溢出环绕，属于可预见行为
-				*mMemory += curCode.szCalcValue;
+				*mMemory += (uint8_t)curCode.szCalcValue;
 			}
 			break;
 		case CodeUnit::SubCur:
 			{//注意：与内存单元，也就是uint8_t进行运算，能正确进行溢出环绕，属于可预见行为
-				*mMemory -= curCode.szCalcValue;
+				*mMemory -= (uint8_t)curCode.szCalcValue;
 			}
 			break;
 		case CodeUnit::OptCur:
 			{
-				putch(*mMemory);
+				_putch(*mMemory);
 			}
 			break;
 		case CodeUnit::IptCur:

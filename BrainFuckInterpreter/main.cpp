@@ -9,15 +9,8 @@ int main(int argc, char *argv[], char *envp[])
 		return 0;
 	}
 
-
-
-
-
-
-
-
-
-
+	Interpreter itp(argv[1]);
+	itp.run();
 
 	return 0;
 }
