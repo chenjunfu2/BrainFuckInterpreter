@@ -12,26 +12,29 @@ class Preprocessor//预处理器
 {
 private:
 	//注意szDupCount需要自行初始化！！！本函数仅递增
-	static void FindDuplicate(FileStream &sFile, const char cFind, size_t& szDupCount)
+	static size_t FindDuplicate(FileStream &sFile, const char cFind)
 	{
+		size_t szDupCount = 0;
 		while(true)
 		{
 			char cRead;
 			sFile.Read(cRead);
 			if (sFile.Eof())
 			{
-				return;//返回上级处理
+				break;//文件结束，离开
 			}
 
 			//判断是否相同（处理重复字符）
 			if (cRead != cFind)
 			{
 				sFile.MovFilePos(-1);//回退1读取
-				return;//遇到不同，直接返回
+				break;//遇到不同，直接离开
 			}
 			
 			++szDupCount;//相同继续合并
 		}
+
+		return szDupCount;
 	}
 public:
 	//如果该函数返回false，那么任何使用listCode进行执行的操作都是未定义行为，当然，读取失败现场是没问题的
@@ -72,7 +75,9 @@ public:
 					CurCode.enSymbol = CodeUnit::NextMov;
 					CurCode.szMovOffset = 1;
 					//查找重复值
-					FindDuplicate(sFile, cRead, CurCode.szMovOffset);
+					size_t szDupCount = FindDuplicate(sFile, cRead);
+					CurCode.szMovOffset += szDupCount;
+					szColumn += szDupCount;//连续读取处理列号
 				}
 				break;
 			case '<':
@@ -80,7 +85,9 @@ public:
 					CurCode.enSymbol = CodeUnit::PrevMov;
 					CurCode.szMovOffset = 1;
 					//查找重复值
-					FindDuplicate(sFile, cRead, CurCode.szMovOffset);
+					size_t szDupCount = FindDuplicate(sFile, cRead);
+					CurCode.szMovOffset += szDupCount;
+					szColumn += szDupCount;//连续读取处理列号
 				}
 				break;
 			case '+':
@@ -88,7 +95,9 @@ public:
 					CurCode.enSymbol = CodeUnit::AddCur;
 					CurCode.szCalcValue = 1;
 					//查找重复值
-					FindDuplicate(sFile, cRead, CurCode.szCalcValue);
+					size_t szDupCount = FindDuplicate(sFile, cRead);
+					CurCode.szCalcValue += szDupCount;
+					szColumn += szDupCount;//连续读取处理列号
 				}
 				break;
 			case '-':
@@ -96,7 +105,9 @@ public:
 					CurCode.enSymbol = CodeUnit::SubCur;
 					CurCode.szCalcValue = 1;
 					//查找重复值
-					FindDuplicate(sFile, cRead, CurCode.szCalcValue);
+					size_t szDupCount = FindDuplicate(sFile, cRead);
+					CurCode.szCalcValue += szDupCount;
+					szColumn += szDupCount;//连续读取处理列号
 				}
 				break;
 			case '.':
@@ -133,15 +144,16 @@ public:
 
 					//现在，读取所有重复的]，让前面与之配对的所有loopbeg都跳转到重复的最后，而对每个重复的]处理正确配对
 					//这样，减少重复loopend的来回跳转开销与判断开销
-					size_t szDupCount = 0;
-					FindDuplicate(sFile, cRead, szDupCount);
+					size_t szDupCount = FindDuplicate(sFile, cRead);
 
 					//在此之前，先判断一下szStackTop够不够szDupCount，不够说明括号未配对，报错
 					if (szDupCount > szStackTop)
 					{
-						printf("解析失败[line:%zu,column:%zu]：括号未匹配\n", szLine, szColumn);
+						printf("解析失败[line:%zu,column:%zu]：括号未匹配\n", szLine, szColumn + szStackTop + 1);//通过剩余未匹配括号来定位错误点
 						return false;
 					}
+
+					szColumn += szDupCount;//处理列号
 
 					//获取szDupCount后，往尾部塞入多个循环块，并把最后一个循环块作为前面所有判断的跳转目标
 					while (szDupCount-- > 0)//循环szDupCount次
