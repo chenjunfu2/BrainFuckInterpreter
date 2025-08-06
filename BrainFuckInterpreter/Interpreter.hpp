@@ -30,7 +30,7 @@ public:
 			printf("预处理错误：翻译失败！\n");
 		}
 
-		exe.SetListCode(std::move(listCode));
+		exe.SetListCode(std::move(listCode));//执行器初始化完成
 	}
 
 	void run(void)

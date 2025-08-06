@@ -52,7 +52,12 @@ public:
 	void SetListCode(CodeList _listCode, size_t _szCodeIndex = 0)
 	{
 		szCodeIndex = _szCodeIndex;
-		listCode = _listCode;
+		listCode = std::move(_listCode);
+	}
+
+	void ResetMemory(void)
+	{
+		mMemory.Reset();
 	}
 
 	const MemoryManager &GetMemory(void)
@@ -78,62 +83,45 @@ public:
 		switch (curCode.enSymbol)
 		{
 		case CodeUnit::ProgEnd:
-			{
-				return false;
-			}
+			return false;//直接结束
 			break;
 		case CodeUnit::NextMov:
-			{
-				mMemory += curCode.szMovOffset;
-			}
+			mMemory += curCode.szMovOffset;
 			break;
 		case CodeUnit::PrevMov:
-			{
-				mMemory -= curCode.szMovOffset;
-			}
+			mMemory -= curCode.szMovOffset;
 			break;
 		case CodeUnit::AddCur:
-			{//注意：与内存单元，也就是uint8_t进行运算，能正确进行溢出环绕，属于可预见行为
-				*mMemory += (uint8_t)curCode.szCalcValue;
-			}
+			*mMemory += (uint8_t)curCode.szCalcValue;
 			break;
 		case CodeUnit::SubCur:
-			{//注意：与内存单元，也就是uint8_t进行运算，能正确进行溢出环绕，属于可预见行为
-				*mMemory -= (uint8_t)curCode.szCalcValue;
-			}
+			*mMemory -= (uint8_t)curCode.szCalcValue;
 			break;
 		case CodeUnit::OptCur:
-			{
-				_putch(*mMemory);
-			}
+			_putch(*mMemory);
 			break;
 		case CodeUnit::IptCur:
-			{
-				*mMemory = _getch();
-			}
+			*mMemory = _getch();
 			break;
 		case CodeUnit::LoopBeg:
+			if (*mMemory == 0)
 			{
-				if (*mMemory == 0)
-				{
-					szCodeIndex = curCode.szJmpIndex;//跳转
-				}
+				szCodeIndex = curCode.szJmpIndex;//跳转
 			}
 			break;
 		case CodeUnit::LoopEnd:
-			{
-				szCodeIndex = curCode.szJmpIndex;//无条件跳转
-			}
+			szCodeIndex = curCode.szJmpIndex;//无条件跳转
 			break;
 		case CodeUnit::DbgInfo:
-			{
-				printf("\n[%zu]:0x%X\n", mMemory.GetIndex(), *mMemory);
-			}
+			printf("\n[%zu]:0x%X\n", mMemory.GetIndex(), *mMemory);
 			break;
 		default:
-			MyAssert(false, "致命错误：未知的指令！");
+			printf("致命错误：未知的指令！\n");
+			return false;//注意直接返回失败
 			break;
 		}
+
+		return true;
 	}
 
 	void Loop(void)

@@ -1,7 +1,7 @@
 ﻿#include <stdio.h>
 #include "Interpreter.hpp"
 
-int main(int argc, char *argv[], char *envp[])
+int main(int argc, char *argv[])
 {
 	//if (argc != 2)
 	//{

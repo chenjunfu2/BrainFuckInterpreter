@@ -47,7 +47,7 @@ public:
 	{
 		if (pFile != NULL)
 		{
-			free(pFile);
+			fclose(pFile);
 			pFile = NULL;
 		}
 	}

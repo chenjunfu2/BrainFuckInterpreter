@@ -1,5 +1,7 @@
 #pragma once
 
+#include "MyAssert.hpp"
+
 #include <cstdlib>
 #include <cstring>
 #include <cstdint>
@@ -16,8 +18,11 @@ private:
 
 	void Clean(void)//清理，注意会删掉内存！
 	{
-		free(pBase);
-		pBase = NULL;
+		if (pBase != NULL)
+		{
+			free(pBase);
+			pBase = NULL;
+		}
 		szIndex = 0;
 		szSize = 0;
 	}
@@ -147,6 +152,11 @@ public:
 		if (szMoveSize <= szIndex)//防止向前越界
 		{
 			szIndex -= szMoveSize;
+		}
+		else
+		{
+			//报错
+			MyAssert(false, "致命错误：Brainfuck指针尝试向前越界！");
 		}
 		return *this;
 	}
