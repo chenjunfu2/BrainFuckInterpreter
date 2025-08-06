@@ -73,9 +73,33 @@ public:
 		return fread(_Buffer, 1, _Size, pFile);
 	}
 
+	template<typename T>
+	size_t Read(T &_Buffer)
+	{
+		return Read(&_Buffer, sizeof(_Buffer));
+	}
+
+	template<typename T, size_t S>
+	size_t Read(T(&_Buffer)[S])
+	{
+		return Read(&_Buffer, sizeof(_Buffer));
+	}
+	
 	size_t Write(void *_Buffer, size_t _Size)
 	{
 		return fwrite(_Buffer, 1, _Size, pFile);
+	}
+
+	template<typename T>
+	size_t Write(T &_Buffer)
+	{
+		return Write(&_Buffer, sizeof(_Buffer));
+	}
+
+	template<typename T, size_t S>
+	size_t Write(T(&_Buffer)[S])
+	{
+		return Write(&_Buffer, sizeof(_Buffer));
 	}
 
 	int64_t GetFilePos(void)
