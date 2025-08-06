@@ -49,7 +49,7 @@ public:
 
 		//报错信息
 		size_t szLine = 1;
-		size_t szColumn = 0;
+		size_t szColumn = 1;
 
 		//读取并转换到代码列表
 		while (true)
@@ -215,7 +215,7 @@ public:
 					if (bNewLine)
 					{
 						++szLine;//递增行号
-						szColumn = 0;//重置列号
+						szColumn = 1;//重置列号
 						continue;//直接继续
 					}
 
