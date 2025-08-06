@@ -9,8 +9,16 @@ int main(int argc, char *argv[])
 		return 0;
 	}
 
-	Interpreter itp(argv[1]);
-	itp.run();
+	try
+	{
+		Interpreter itp(argv[1]);
+		itp.run();
+	}
+	catch (const std::bad_alloc &)
+	{
+		printf("运行错误：内存不足！\n");
+		exit(-1);
+	}
 
 	return 0;
 }
