@@ -155,6 +155,7 @@
     <ClInclude Include="Executor.hpp" />
     <ClInclude Include="FileStream.hpp" />
     <ClInclude Include="MemoryManager.hpp" />
+    <ClInclude Include="MyAssert.hpp" />
     <ClInclude Include="Preprocessor.hpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

@@ -158,4 +158,19 @@ public:
 	{
 		return pBase[szIndex];//szIndex在其他地方保证不越界，无需检查
 	}
+
+	uint8_t &operator[](size_t szIndexNoCheck)//危险
+	{
+		return pBase[szIndexNoCheck];
+	}
+
+	size_t GetIndex(void)//获取当前内存索引
+	{
+		return szIndex;
+	}
+
+	void SetIndex(size_t szIndexNoCheck)//危险
+	{
+		szIndex = szIndexNoCheck;
+	}
 };

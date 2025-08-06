@@ -11,10 +11,8 @@
 class Preprocessor//预处理器
 {
 private:
-	CodeList listCode{};
-
 	//注意szDupCount需要自行初始化！！！本函数仅递增
-	void FindDuplicate(FileStream &sFile, const char cFind, size_t& szDupCount)
+	static void FindDuplicate(FileStream &sFile, const char cFind, size_t& szDupCount)
 	{
 		while(true)
 		{
@@ -35,27 +33,16 @@ private:
 			++szDupCount;//相同继续合并
 		}
 	}
-
 public:
-	void Clear(void)
-	{
-		listCode.clear();
-	}
-
-	const CodeList &GetListCode(void)
-	{
-		return listCode;
-	}
-
 	//如果该函数返回false，那么任何使用listCode进行执行的操作都是未定义行为，当然，读取失败现场是没问题的
-	bool PreprocessInFile(FileStream &sFile)
+	static bool PreprocessInFile(FileStream &sFile, CodeList &listCode)
 	{
 		if (!sFile)//文件是NULL，返回
 		{
 			return false;
 		}
 
-		Clear();//清理以便读取
+		listCode.clear();//清理以便读取
 
 		//块语句栈（存储索引）
 		std::vector<size_t> codeBlockStack;
