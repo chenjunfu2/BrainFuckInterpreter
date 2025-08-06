@@ -1,5 +1,6 @@
-﻿#include <stdio.h>
-#include "Interpreter.hpp"
+﻿#include "Interpreter.hpp"
+
+#include <stdio.h>
 
 int main(int argc, char *argv[])
 {
