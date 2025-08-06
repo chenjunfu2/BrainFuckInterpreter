@@ -8,10 +8,10 @@
 class MemoryManager//内存管理器
 {
 private:
-	uint8_t *pBase;//基地址指针
-	size_t szIndex;//当前位置下标
-	size_t szSize;//数组总大小
-public:
+	uint8_t *pBase = NULL;//基地址指针
+	size_t szIndex = 0;//当前位置下标
+	size_t szSize = 0;//数组总大小
+private:
 	constexpr const static size_t DEFAULT_EXPAND_FACTOR = 2;//默认二倍
 
 	void Clean(void)//清理，注意会删掉内存！
@@ -129,6 +129,12 @@ public:
 		Clean();
 	}
 
+	void Reset(void)
+	{
+		szIndex = 0;//指针回到开头
+		memset(pBase, 0, szSize);//置零
+	}
+
 	MemoryManager &operator+=(size_t szMoveSize)
 	{
 		CheckExpand(szMoveSize);//自动扩容
@@ -162,6 +168,11 @@ public:
 	uint8_t &operator[](size_t szIndexNoCheck)//危险
 	{
 		return pBase[szIndexNoCheck];
+	}
+
+	operator bool(void)
+	{
+		return pBase != NULL;
 	}
 
 	size_t GetIndex(void)//获取当前内存索引

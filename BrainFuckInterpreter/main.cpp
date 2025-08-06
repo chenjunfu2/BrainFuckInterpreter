@@ -3,6 +3,11 @@
 
 int main(int argc, char *argv[], char *envp[])
 {
+	if (argc != 2)
+	{
+		printf("仅接受一个brainfuck文件名参数！");
+		return 0;
+	}
 
 
 
@@ -14,7 +19,5 @@ int main(int argc, char *argv[], char *envp[])
 
 
 
-
-
-	return -114514;
+	return 0;
 }

@@ -15,14 +15,19 @@ private:
 	CodeList listCode{};
 	MemoryManager mMemory{};
 public:
-	Executor(CodeList &&_listCode, size_t _szCodeIndex = 0, MemoryManager &&_managerMem = {}) :szCodeIndex(_szCodeIndex), listCode(std::move(_listCode)), mMemory(std::move(_managerMem))
-	{}
+	Executor(void) = default;
+	Executor(CodeList _listCode, size_t _szCodeIndex = 0, MemoryManager _mMemory = {}) :szCodeIndex(_szCodeIndex), listCode(std::move(_listCode)), mMemory(std::move(_mMemory))
+	{
+		MyAssert(mMemory, "ÖÂÃü´íÎó£ºÄÚ´æÎªNULL£¡");
+	}
 	~Executor(void) = default;
 
 	Executor(const Executor &&) = delete;
 	Executor(Executor &&_Move) :szCodeIndex(_Move.szCodeIndex), listCode(std::move(_Move.listCode)), mMemory(std::move(_Move.mMemory))
 	{
 		_Move.szCodeIndex = 0;
+
+		MyAssert(mMemory, "ÖÂÃü´íÎó£ºÄÚ´æÎªNULL£¡");
 	}
 
 	Executor &operator=(const Executor &) = delete;
@@ -33,6 +38,36 @@ public:
 
 		listCode = std::move(_Move.listCode);
 		mMemory = std::move(_Move.mMemory);
+
+		MyAssert(mMemory, "ÖÂÃü´íÎó£ºÄÚ´æÎªNULL£¡");
+	}
+
+	void SetMemory(MemoryManager _mMemory)
+	{
+		mMemory = std::move(_mMemory);
+
+		MyAssert(mMemory, "ÖÂÃü´íÎó£ºÄÚ´æÎªNULL£¡");
+	}
+
+	void SetListCode(CodeList _listCode, size_t _szCodeIndex = 0)
+	{
+		szCodeIndex = _szCodeIndex;
+		listCode = _listCode;
+	}
+
+	const MemoryManager &GetMemory(void)
+	{
+		return mMemory;
+	}
+
+	const CodeList& GetListCode(void)
+	{
+		return listCode;
+	}
+
+	size_t GetCodeIndex(void)
+	{
+		return szCodeIndex;
 	}
 
 	bool Once(void)
