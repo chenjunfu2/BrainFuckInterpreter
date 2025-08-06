@@ -19,12 +19,13 @@ struct CodeUnit
 		]		如果指针指向的单元值不为零，向前跳转到对应的[指令的次一指令处
 
 		下为新增
-		?		输出当前内存单元格信息(地址+值)
+		?		输出当前内存单元格信息(地址(0基索引)+值(十六进制))
 		#		到下一行为止都忽略
 	*/
 	enum Symbol : uint8_t
 	{
-		Unknown = 0,
+		Unknown = 0,//未知（正常无用）
+		ProgEnd = 0,//特殊标记，程序结束
 		NextMov,	//>
 		PrevMov,	//<
 		AddCur,		//+
@@ -36,11 +37,12 @@ struct CodeUnit
 		DbgInfo,	//?
 	};
 
-	Symbol sym;
+	Symbol enSymbol = Unknown;
 	union
 	{
-		uint8_t u8Val;//计算用累计值
-		size_t szIndex;//跳转用索引
+		size_t szCalcValue = 0;//计算用累计值
+		size_t szJmpIndex;//跳转用索引
+		size_t szMovOffset;//移动用偏移量
 	};
 };
 
