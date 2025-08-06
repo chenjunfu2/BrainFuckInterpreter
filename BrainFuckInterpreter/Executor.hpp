@@ -113,7 +113,7 @@ public:
 			szCodeIndex = curCode.szJmpIndex;//无条件跳转
 			break;
 		case CodeUnit::DbgInfo:
-			printf("\n[%zu]:0x%X\n", mMemory.GetIndex(), *mMemory);
+			printf("[%zu]:0x%X\n", mMemory.GetIndex(), *mMemory);
 			break;
 		default:
 			printf("致命错误：未知的指令！\n");
