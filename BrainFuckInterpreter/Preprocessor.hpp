@@ -62,7 +62,7 @@ public:
 			}
 
 			//每读一个字符增加一列
-			++szColumn;
+			++szColumn;//处理列号
 
 			CodeUnit CurCode{};
 			switch (cRead)
@@ -101,12 +101,12 @@ public:
 				break;
 			case '.':
 				{
-					CurCode.enSymbol = CodeUnit::OptCur;
+					CurCode.enSymbol = CodeUnit::OptCur;//仅保存指令符号，附加信息无效
 				}
 				break;
 			case ',':
 				{
-					CurCode.enSymbol = CodeUnit::IptCur;
+					CurCode.enSymbol = CodeUnit::IptCur;//仅保存指令符号，附加信息无效
 				}
 				break;
 			case '['://先预留，并压入栈，等待]计算跳转偏移量
@@ -169,46 +169,35 @@ public:
 				continue;//注意此处为continue而非break，不走下面默认压入
 			case '?':
 				{
-					CurCode.enSymbol = CodeUnit::DbgInfo;
+					CurCode.enSymbol = CodeUnit::DbgInfo;//仅保存指令符号，附加信息无效
 				}
 				break;
 			case '#':
 				{
 					//处理注释
-					//读取，直到换行符
-					bool bCR = false;//\r
-					bool bLF = false;//\n
+					//读取，直到换行符中的任意一个，回退并走default处理，以便统一行号列号
 					while (true)
 					{
 						char cRead;
 						sFile.Read(cRead);
 						if (sFile.Eof())
 						{
-							break;//离开循环，回到外层判断
+							break;//离开循环，回到外层判断，并退出
 						}
 
-						if (cRead == '\r')
-						{
-							bCR = true;
-						}
-						else if (cRead == '\n')
-						{
-							bLF = true;
-						}
-						else if (bCR || bLF)
+						if (cRead == '\r' || cRead == '\n')
 						{
 							sFile.MovFilePos(-1);//回退1字节，退出循环
 							break;
 						}
+						//否则丢弃读取的字符（注释无需保留）
 					}
-
 				}
 				continue;//注意此处为continue而非break，不走下面默认压入
 			default:
-				//处理行号
 				{
+					//处理换行
 					bool bNewLine = false;
-
 					if (cRead == '\r')//判断下一个是不是\n
 					{
 						bNewLine = true;
@@ -223,11 +212,10 @@ public:
 						bNewLine = true;
 					}
 
-
 					if (bNewLine)
 					{
-						++szLine;
-						szColumn = 1;
+						++szLine;//递增行号
+						szColumn = 1;//重置列号
 						continue;//直接继续
 					}
 
@@ -236,15 +224,11 @@ public:
 					{
 						continue;//跳过空白，直接继续
 					}
-					
 
 					//都不是，那么未知字符且不在注释内，报错
 					printf("解析失败[line:%zu,column:%zu]：遇到未知字符:[%c]\n", szLine, szColumn, cRead);
-
-					//todo报错：行号字符数
-					return false;//注意报错直接返回
 				}
-				break;
+				return false;//注意报错直接返回
 			}
 
 			//压入列表
