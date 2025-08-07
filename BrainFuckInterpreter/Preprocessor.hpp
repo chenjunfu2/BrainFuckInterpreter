@@ -238,7 +238,7 @@ public:
 					}
 
 					//都不是，那么未知字符且不在注释内，报错
-					printf("解析失败[line:%zu,column:%zu]：遇到未知字符:[%c]\n", szLine, szColumn, cRead);
+					printf("解析失败[line:%zu,column:%zu]：遇到未知字符\'%c\'\n", szLine, szColumn, cRead);
 				}
 				return false;//注意报错直接返回
 			}

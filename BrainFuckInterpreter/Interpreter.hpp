@@ -21,14 +21,14 @@ public:
 		FileStream sFile(pFileName, "rb");
 		if (!sFile)
 		{
-			printf("文件错误：打开失败！\n");
+			printf("文件错误：打开失败\n");
 			exit(-1);
 		}
 
 		CodeList listCode{};
 		if(!Preprocessor::PreprocessInFile(sFile, listCode))
 		{
-			printf("预处理错误：翻译失败！\n");
+			printf("预处理错误：翻译失败\n");
 			exit(-1);
 		}
 

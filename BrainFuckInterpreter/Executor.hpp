@@ -71,7 +71,7 @@ public:
 	{
 		if (szCodeIndex >= listCode.size())
 		{
-			printf("致命错误：指令指针[%zu]超出索引范围[0~%zu]！\n", szCodeIndex, listCode.size() - 1);
+			printf("致命错误：指令指针[%zu]超出索引范围[0~%zu]\n", szCodeIndex, listCode.size() - 1);
 			exit(-1);
 		}
 
@@ -112,7 +112,7 @@ public:
 			printf("[Mem:%zu = 0x%02X]\n", mMemory.GetIndex(), *mMemory);
 			break;
 		default:
-			printf("致命错误：未知的指令！\n");
+			printf("致命错误：未知的指令\n");
 			return false;//注意直接返回失败
 			break;
 		}

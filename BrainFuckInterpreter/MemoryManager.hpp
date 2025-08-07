@@ -156,7 +156,7 @@ public:
 		else
 		{
 			//报错
-			printf("致命错误：程序指针尝试向前越界！\n");
+			printf("致命错误：程序指针尝试向前越界\n");
 			exit(-1);
 		}
 		return *this;
