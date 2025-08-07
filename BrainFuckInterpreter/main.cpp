@@ -16,7 +16,7 @@ int main(int argc, const char *argv[])
 	{
 		printf
 		(
-			"%s [V %s]\n"\
+			"%s [V%s]\n"\
 			"%s %s %s\n"\
 			"\n"\
 			"命令行说明：\n"\
