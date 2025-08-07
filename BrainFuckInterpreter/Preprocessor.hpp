@@ -38,7 +38,7 @@ private:
 	}
 public:
 	//如果该函数返回false，那么任何使用listCode进行执行的操作都是未定义行为，当然，读取失败现场是没问题的
-	static bool PreprocessInFile(FileStream &sFile, CodeList &listCode)
+	static bool PreprocessInFile(FileStream &sFile, CodeList &listCode, bool bIgnoreUnknownChar = false)
 	{
 		if (!sFile)//文件是NULL，返回
 		{
@@ -229,6 +229,11 @@ public:
 						++szLine;//递增行号
 						szColumn = 1;//重置列号
 						continue;//直接继续
+					}
+
+					if (bIgnoreUnknownChar)
+					{
+						continue;//直接全部跳过，不判断空白还是未知字符了
 					}
 
 					//不是换行，处理其余空白

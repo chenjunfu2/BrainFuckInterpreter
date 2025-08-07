@@ -16,7 +16,7 @@ public:
 	用预处理器合并多个加减位移单元，
 	用执行器执行
 	*/
-	Interpreter(const char *pFileName)
+	Interpreter(const char *pFileName, bool bIgnoreUnknownChar)
 	{
 		FileStream sFile(pFileName, "rb");
 		if (!sFile)
@@ -26,7 +26,7 @@ public:
 		}
 
 		CodeList listCode{};
-		if(!Preprocessor::PreprocessInFile(sFile, listCode))
+		if(!Preprocessor::PreprocessInFile(sFile, listCode, bIgnoreUnknownChar))
 		{
 			printf("预处理错误：翻译失败\n");
 			exit(-1);
