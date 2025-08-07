@@ -3,12 +3,22 @@
 #include <stdio.h>
 #include <new>
 
+#define PROJECT "BrainFuckInterpreter"
+#define VERSION "1.0.2"
+
+#define COPYRIGHT "CopyRight(C)"
+#define YEAR "2025"
+#define AUTHOR "chenjunfu2"
+
 int main(int argc, const char *argv[])
 {
 	if (argc < 2 || argc > 3)
 	{
 		printf
 		(
+			"%s [Version %s]\n"\
+			"%s %s %s\n"\
+			"\n"\
 			"命令行说明：\n"\
 			"   1.SELF指代程序自身名字\n"\
 			"   2.方括号[]内为可选项，多个选项用/隔开\n"\
@@ -20,6 +30,7 @@ int main(int argc, const char *argv[])
 			"   SELF [-iuc] (FileName)\n"\
 			"      -iuc      忽略未知字符，不报错\n"\
 			"      FileName  需要运行的BF代码文件名\n"\
+			, PROJECT, VERSION, COPYRIGHT, YEAR, AUTHOR
 		);
 		exit(0);
 	}
