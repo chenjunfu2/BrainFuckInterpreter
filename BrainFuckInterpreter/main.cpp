@@ -11,13 +11,13 @@
 #define AUTHOR "chenjunfu2"
 
 
-void Head(void)
+void PrintHead(void)
 {
 	printf("%s [V%s]\n%s %s %s\n\n", PROJECT, VERSION, COPYRIGHT, YEAR, AUTHOR);
 }
 
 
-void Help(void)
+void PrintHelp(void)
 {
 	printf
 	(
@@ -49,12 +49,11 @@ bool IsOption(const char *pInput)
 
 int main(int argc, const char *argv[])
 {
-	Head();
+	PrintHead();//输出固定程序信息头
 
-	if (argc < 3 || argc > 4)
+	if (argc < 2)
 	{
-		printf("命令行参数数量错误！\n");
-		Help();
+		PrintHelp();
 		exit(0);
 	}
 
@@ -161,7 +160,7 @@ int main(int argc, const char *argv[])
 		default:
 		Error:
 			printf("命令行参数未知或重复！\n");
-			Help();
+			PrintHelp();
 			exit(0);
 			break;
 		}
