@@ -1,6 +1,6 @@
 # BrainFuckInterpreter
 一个简易的BrainFuck解释器</br>
-</br>
+使用命令行启动程序，执行完毕后自动退出</br>
 <pre>
 命令行说明：
    - SELF指代程序自身名字
