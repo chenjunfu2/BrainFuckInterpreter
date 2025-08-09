@@ -21,3 +21,5 @@
       Input     需要运行的BF代码（参数中输入）
 
 </pre>
+使用示例：</br>
+<img width="1285" height="382" alt="使用示例" src="https://github.com/user-attachments/assets/e58b311e-47ec-429e-b4d4-c60aff4671ef" />
