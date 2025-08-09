@@ -1,5 +1,6 @@
 # BrainFuckInterpreter
 一个简易的BrainFuck解释器</br>
+</br>
 命令行说明：</br>
    \- SELF指代程序自身名字</br>
    \- 方括号[]内为可选项</br>
@@ -16,4 +17,4 @@
       -a        从参数中输入并运行BF代码</br>
       -i        从标准流中输入并运行BF代码</br>
       FileName  需要运行的BF代码文件名</br>
-      Input     需要运行的BF代码（参数中输入）</br>
+      Input     需要运行的BF代码（参数中输入记得加双引号）</br>
