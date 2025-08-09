@@ -10,26 +10,37 @@ class Interpreter//解释器
 {
 	Executor exe{};
 public:
-	/*
-	流程：
-	先打开bf执行文件，
-	用预处理器合并多个加减位移单元，
-	用执行器执行
-	*/
-	Interpreter(const char *pFileName, bool bIgnoreUnknownChar)
+	Interpreter(const char *pStr, bool bIsFile, bool bIgnoreUnknownChar)
 	{
-		FileStream sFile(pFileName, "rb");
-		if (!sFile)
-		{
-			printf("文件错误：打开失败\n");
-			exit(-1);
-		}
-
 		CodeList listCode{};
-		if(!Preprocessor::PreprocessInFile(sFile, listCode, bIgnoreUnknownChar))
+
+		if (bIsFile)
 		{
-			printf("预处理错误：翻译失败\n");
-			exit(-1);
+			FileStream sFile(pStr, "rb");
+			if (!sFile)
+			{
+				printf("文件错误：打开失败\n");
+				exit(-1);
+			}
+
+			if (!Preprocessor<FileStream>::PreprocessInFile(sFile, listCode, bIgnoreUnknownChar))
+			{
+				printf("预处理错误：翻译失败\n");
+				exit(-1);
+			}
+		}
+		else
+		{
+
+
+
+			CharStream csInput(pStr, strlen(pStr));//不用判断csInput有效性，此处默认一定成功
+			CodeList listCode{};
+			if (!Preprocessor<CharStream>::PreprocessInFile(csInput, listCode, bIgnoreUnknownChar))
+			{
+				printf("预处理错误：翻译失败\n");
+				exit(-1);
+			}
 		}
 
 		exe.SetListCode(std::move(listCode));//执行器初始化完成

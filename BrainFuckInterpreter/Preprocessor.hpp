@@ -2,24 +2,24 @@
 
 #include "CodeUnit.hpp"
 #include "FileStream.hpp"
+#include "CharStream.hpp"
 
 #include <cstdio>
 #include <vector>
 #include <cctype>
 
-
+template<typename StreamType>
 class Preprocessor//预处理器
 {
 private:
 	//注意szDupCount需要自行初始化！！！本函数仅递增
-	static size_t FindDuplicate(FileStream &sFile, const char cFind)
+	static size_t FindDuplicate(StreamType &sStream, const char cFind)
 	{
 		size_t szDupCount = 0;
 		while(true)
 		{
-			char cRead;
-			sFile.Read(cRead);
-			if (sFile.Eof())
+			char cRead = sStream.GetChar();
+			if (sStream.Eof())
 			{
 				break;//文件结束，离开
 			}
@@ -27,7 +27,7 @@ private:
 			//判断是否相同（处理重复字符）
 			if (cRead != cFind)
 			{
-				sFile.MovFilePos(-1);//回退1读取
+				sStream.UnGet();//回退1读取
 				break;//遇到不同，直接离开
 			}
 			
@@ -38,9 +38,9 @@ private:
 	}
 public:
 	//如果该函数返回false，那么任何使用listCode进行执行的操作都是未定义行为，当然，读取失败现场是没问题的
-	static bool PreprocessInFile(FileStream &sFile, CodeList &listCode, bool bIgnoreUnknownChar = false)
+	static bool PreprocessInFile(StreamType &sStream, CodeList &listCode, bool bIgnoreUnknownChar = false)
 	{
-		if (!sFile)//文件是NULL，返回
+		if (!sStream)//文件是NULL，返回
 		{
 			return false;
 		}
@@ -57,9 +57,8 @@ public:
 		//读取并转换到代码列表
 		while (true)
 		{
-			char cRead;
-			sFile.Read(cRead);
-			if (sFile.Eof())
+			char cRead = sStream.GetChar();
+			if (sStream.Eof())
 			{
 				break;//读完离开
 			}
@@ -75,7 +74,7 @@ public:
 					CurCode.enSymbol = CodeUnit::NextMov;
 					CurCode.szMovOffset = 1;
 					//查找重复值
-					size_t szDupCount = FindDuplicate(sFile, cRead);
+					size_t szDupCount = FindDuplicate(sStream, cRead);
 					CurCode.szMovOffset += szDupCount;
 					szColumn += szDupCount;//连续读取处理列号
 				}
@@ -85,7 +84,7 @@ public:
 					CurCode.enSymbol = CodeUnit::PrevMov;
 					CurCode.szMovOffset = 1;
 					//查找重复值
-					size_t szDupCount = FindDuplicate(sFile, cRead);
+					size_t szDupCount = FindDuplicate(sStream, cRead);
 					CurCode.szMovOffset += szDupCount;
 					szColumn += szDupCount;//连续读取处理列号
 				}
@@ -95,7 +94,7 @@ public:
 					CurCode.enSymbol = CodeUnit::AddCur;
 					CurCode.szCalcValue = 1;
 					//查找重复值
-					size_t szDupCount = FindDuplicate(sFile, cRead);
+					size_t szDupCount = FindDuplicate(sStream, cRead);
 					CurCode.szCalcValue += szDupCount;
 					szColumn += szDupCount;//连续读取处理列号
 				}
@@ -105,7 +104,7 @@ public:
 					CurCode.enSymbol = CodeUnit::SubCur;
 					CurCode.szCalcValue = 1;
 					//查找重复值
-					size_t szDupCount = FindDuplicate(sFile, cRead);
+					size_t szDupCount = FindDuplicate(sStream, cRead);
 					CurCode.szCalcValue += szDupCount;
 					szColumn += szDupCount;//连续读取处理列号
 				}
@@ -144,7 +143,7 @@ public:
 
 					//现在，读取所有重复的]，让前面与之配对的所有loopbeg都跳转到重复的最后，而对每个重复的]处理正确配对
 					//这样，减少重复loopend的来回跳转开销与判断开销
-					size_t szDupCount = FindDuplicate(sFile, cRead);
+					size_t szDupCount = FindDuplicate(sStream, cRead);
 
 					//在此之前，先判断一下szStackTop够不够szDupCount，不够说明括号未配对，报错
 					if (szDupCount > szStackTop)
@@ -190,16 +189,15 @@ public:
 					//读取，直到换行符中的任意一个，回退并走default处理，以便统一行号列号
 					while (true)
 					{
-						char cRead;
-						sFile.Read(cRead);
-						if (sFile.Eof())
+						char cRead = sStream.GetChar();
+						if (sStream.Eof())
 						{
 							break;//离开循环，回到外层判断，并退出
 						}
 
 						if (cRead == '\r' || cRead == '\n')
 						{
-							sFile.MovFilePos(-1);//回退1字节，退出循环
+							sStream.UnGet();//回退1字节，退出循环
 							break;
 						}
 						//否则丢弃读取的字符（注释无需保留）
@@ -208,15 +206,15 @@ public:
 				continue;//注意此处为continue而非break，不走下面默认压入
 			default:
 				{
-					//处理换行
+					//处理换行：只存在：\r或\n或\r\n的情况，无其他情况
 					bool bNewLine = false;
 					if (cRead == '\r')//判断下一个是不是\n
 					{
 						bNewLine = true;
-						sFile.Read(cRead);
-						if (!sFile.Eof() && cRead != '\n')
+						cRead = sStream.GetChar();
+						if (!sStream.Eof() && cRead != '\n')
 						{
-							sFile.MovFilePos(-1);//回退1字节
+							sStream.UnGet();//回退1字节
 						}//此处哪怕eof也不用担心，更新后就会continue，然后退出循环
 					}
 					else if (cRead == '\n')

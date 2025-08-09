@@ -152,12 +152,15 @@
     <ClCompile Include="main.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="ConsoleStream.hpp" />
     <ClInclude Include="Interpreter.hpp" />
     <ClInclude Include="CodeUnit.hpp" />
     <ClInclude Include="Executor.hpp" />
     <ClInclude Include="FileStream.hpp" />
+    <ClInclude Include="IO.hpp" />
     <ClInclude Include="MemoryManager.hpp" />
     <ClInclude Include="Preprocessor.hpp" />
+    <ClInclude Include="CharStream.hpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

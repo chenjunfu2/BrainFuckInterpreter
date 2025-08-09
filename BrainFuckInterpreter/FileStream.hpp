@@ -7,22 +7,26 @@
 class FileStream
 {
 private:
-	FILE *pFile = NULL;
+	FILE *pFile = NULL;//默认为NULL
+	bool bClose = false;//默认不持有对象（不关闭）
 public:
 	FileStream(void) = default;
 
 	FileStream(const FileStream &) = delete;
-	FileStream(FileStream &&_Move) :pFile(_Move.pFile)
+	FileStream(FileStream &&_Move) :
+		pFile(_Move.pFile), bClose(_Move.bClose)
 	{
 		_Move.pFile = NULL;
+		_Move.bClose = false;
 	}
 
-	FileStream(FILE *_pFile) :pFile(_pFile)
+	FileStream(FILE *_pFile, bool _bClose = false) ://从file来的对象默认不持有
+		pFile(_pFile), bClose(_bClose)
 	{}
 
-	FileStream(char const *_FileName, char const *_Mode)
+	FileStream(char const *_FileName, char const *_Mode, bool _bClose = true)//打开的对象默认持有
 	{
-		Open(_FileName, _Mode);
+		Open(_FileName, _Mode, _bClose);//这里千万不可在构造提前初始化bClose，否则可能误关闭原先的对象
 	}
 
 	~FileStream(void)
@@ -34,25 +38,33 @@ public:
 	FileStream &operator =(FileStream &&_Move)
 	{
 		pFile = _Move.pFile;
+		bClose = _Move.bClose;
+
 		_Move.pFile = NULL;
+		_Move.bClose = false;
 	}
 
-	void Open(char const *_FileName, char const *_Mode)
+	void Open(char const *_FileName, char const *_Mode, bool _bClose = true)//打开的对象默认持有
 	{
-		Close();
+		Close();//先关闭原先的（如果可以）
+		//再打开并赋值
 		pFile = fopen(_FileName, _Mode);
+		bClose = _bClose;
 	}
 
 	void Close(void)
 	{
-		if (pFile != NULL)
+		if (bClose == true &&
+			pFile != NULL)
 		{
 			fclose(pFile);
-			pFile = NULL;
 		}
+
+		//不论是否关闭，强制为NULL
+		pFile = NULL;
 	}
 
-	operator bool(void)
+	operator bool(void) const
 	{
 		return pFile != NULL;
 	}
@@ -62,10 +74,27 @@ public:
 		return pFile;
 	}
 
-	void SetFile(FILE *pNewFile)
+	void SetFile(FILE *pNewFile, bool _bClose = false)//默认不持有
 	{
 		Close();
 		pFile = pNewFile;
+	}
+
+	char GetChar(void)
+	{
+		char cRead;
+		Read(cRead);
+		return cRead;
+	}
+
+	bool PutChar(char cWrite)
+	{
+		return Write(cWrite) == sizeof(cWrite);
+	}
+
+	bool UnGet(void)
+	{
+		return MovFilePos(-1);
 	}
 
 	size_t Read(void *_Buffer, size_t _Size)
@@ -107,24 +136,39 @@ public:
 		return _ftelli64(pFile);
 	}
 
-	int SetFilePos(int64_t _Offset)
+	void Rewind(void)
 	{
-		return _fseeki64(pFile, _Offset, SEEK_SET);
+		rewind(pFile);
 	}
 
-	int MovFilePos(int64_t _Offset)
+	bool SetFilePos(int64_t _Offset)
 	{
-		return _fseeki64(pFile, _Offset, SEEK_CUR);
+		return _fseeki64(pFile, _Offset, SEEK_SET) == 0;//成功返回0
 	}
 
-	int EndFilePos(int64_t _Offset)
+	bool MovFilePos(int64_t _Offset)
 	{
-		return _fseeki64(pFile, _Offset, SEEK_END);
+		return _fseeki64(pFile, _Offset, SEEK_CUR) == 0;//成功返回0
 	}
 
-	bool Eof(void)
+	bool EndFilePos(int64_t _Offset)
 	{
-		return feof(pFile);
+		return _fseeki64(pFile, _Offset, SEEK_END) == 0;//成功返回0
+	}
+
+	bool Eof(void) const//判断是否文件尾
+	{
+		return feof(pFile) != 0;//返回非0则文件尾，否则返回0
+	}
+
+	bool Error(void) const//判断是否产生错误
+	{
+		return ferror(pFile) != 0;//返回非0则错误，否则返回0
+	}
+
+	void ClearError(void)//清除流中的错误
+	{
+		clearerr(pFile);
 	}
 
 	int64_t GetFileSize(void)

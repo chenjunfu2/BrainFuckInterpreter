@@ -2,36 +2,39 @@
 
 #include "CodeUnit.hpp"
 #include "MemoryManager.hpp"
+#include "IO.hpp"
 #include "MyAssert.hpp"
 
 #include <vector>
-#include <conio.h>
 
 class Executor//执行器
 {
 private:
 	size_t szCodeIndex = 0;
 
+	IO io{};
 	CodeList listCode{};
 	MemoryManager mMemory{};
 public:
 	Executor(void) = default;
-	Executor(CodeList _listCode, size_t _szCodeIndex = 0, MemoryManager _mMemory = {}) :szCodeIndex(_szCodeIndex), listCode(std::move(_listCode)), mMemory(std::move(_mMemory))
+	Executor(CodeList _listCode, size_t _szCodeIndex = 0, MemoryManager _mMemory = {}, IO _io = {}) :szCodeIndex(_szCodeIndex), io(_io), listCode(std::move(_listCode)), mMemory(std::move(_mMemory))
 	{}
 	~Executor(void) = default;
 
 	Executor(const Executor &&) = delete;
-	Executor(Executor &&_Move) :szCodeIndex(_Move.szCodeIndex), listCode(std::move(_Move.listCode)), mMemory(std::move(_Move.mMemory))
+	Executor(Executor &&_Move) :szCodeIndex(std::move(_Move.szCodeIndex)), io(std::move(_Move.io)), listCode(std::move(_Move.listCode)), mMemory(std::move(_Move.mMemory))
 	{
-		_Move.szCodeIndex = 0;
+		_Move.szCodeIndex = 0;//非类成员需要手动清理重置
 	}
 
 	Executor &operator=(const Executor &) = delete;
 	Executor &operator=(Executor &&_Move)
 	{
-		szCodeIndex = _Move.szCodeIndex;
-		_Move.szCodeIndex = 0;
+		szCodeIndex = std::move(_Move.szCodeIndex);
+		_Move.szCodeIndex = 0;//非类成员需要手动清理重置
 
+		//类成员调用其移动赋值即可
+		io = std::move(_Move.io);
 		listCode = std::move(_Move.listCode);
 		mMemory = std::move(_Move.mMemory);
 	}
@@ -78,7 +81,7 @@ public:
 		auto &curCode = listCode[szCodeIndex++];
 		switch (curCode.enSymbol)
 		{
-		case CodeUnit::ProgEnd:
+		case CodeUnit::ProgEnd://卫兵标志
 			return false;//直接结束
 			break;
 		case CodeUnit::NextMov:
@@ -94,10 +97,10 @@ public:
 			*mMemory -= (uint8_t)curCode.szCalcValue;
 			break;
 		case CodeUnit::OptCur:
-			_putch(*mMemory);
+			io.Ouput(*mMemory);
 			break;
 		case CodeUnit::IptCur:
-			*mMemory = _getch();
+			*mMemory = io.Input();
 			break;
 		case CodeUnit::LoopBeg:
 			if (*mMemory == 0)
