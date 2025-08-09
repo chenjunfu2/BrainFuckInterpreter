@@ -1,49 +1,90 @@
 #pragma once
 
-#include "FileStream.hpp"
 #include "CodeUnit.hpp"
-#include "Preprocessor.hpp"
 #include "Executor.hpp"
+
+#include "FileStream.hpp"
+#include "StdStream.hpp"
+#include "StrStream.hpp"
+#include "Preprocessor.hpp"
 
 
 class Interpreter//解释器
 {
+private:
 	Executor exe{};
 public:
-	Interpreter(const char *pStr, bool bIsFile, bool bIgnoreUnknownChar)
+	enum StreamType
+	{
+		Unknown,
+		File,
+		Str,
+		Std,
+	};
+
+	Interpreter(const char *pStr, StreamType enStreamType, bool bIgnoreUnknownChar)
 	{
 		CodeList listCode{};
 
-		if (bIsFile)
+		switch (enStreamType)
 		{
-			FileStream sFile(pStr, "rb");
-			if (!sFile)
+		case File:
 			{
-				printf("文件错误：打开失败\n");
-				exit(-1);
-			}
+				FileStream sFile(pStr, "rb");
+				if (!sFile)
+				{
+					printf("文件错误：打开失败\n");
+					exit(-1);
+				}
 
-			if (!Preprocessor<FileStream>::PreprocessInFile(sFile, listCode, bIgnoreUnknownChar))
-			{
-				printf("预处理错误：翻译失败\n");
-				exit(-1);
+				if (!Preprocessor<FileStream>::PreprocessInStream(sFile, listCode, bIgnoreUnknownChar))
+				{
+					printf("预处理错误：翻译失败\n");
+					exit(-1);
+				}
 			}
+			break;
+		case Str:
+			{
+				if (pStr == NULL)
+				{
+					printf("输入错误：输入为空\n");
+					exit(-1);
+				}
+
+				StrStream csInput(pStr, strlen(pStr));//不用判断csInput有效性，此处默认一定成功
+				if (!Preprocessor<StrStream>::PreprocessInStream(csInput, listCode, bIgnoreUnknownChar))
+				{
+					printf("预处理错误：翻译失败\n");
+					exit(-1);
+				}
+			}
+			break;
+		case Std:
+			{
+				StdStream csInput{};
+				if (!Preprocessor<StdStream>::PreprocessInStream(csInput, listCode, bIgnoreUnknownChar))
+				{
+					printf("预处理错误：翻译失败\n");
+					exit(-1);
+				}
+			}
+			break;
+		case Unknown:
+		default:
+			printf("解析错误：未知类型\n");
+			exit(-1);
+			break;
 		}
-		else
+
+		if (listCode.empty())
 		{
-
-
-
-			CharStream csInput(pStr, strlen(pStr));//不用判断csInput有效性，此处默认一定成功
-			CodeList listCode{};
-			if (!Preprocessor<CharStream>::PreprocessInFile(csInput, listCode, bIgnoreUnknownChar))
-			{
-				printf("预处理错误：翻译失败\n");
-				exit(-1);
-			}
+			printf("预处理错误：指令列表为空\n");
+			exit(-1);
 		}
-
-		exe.SetListCode(std::move(listCode));//执行器初始化完成
+		
+		//不为空则初始化执行器
+		exe.SetListCode(std::move(listCode));
 	}
 
 	void run(void)

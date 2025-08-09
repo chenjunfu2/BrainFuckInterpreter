@@ -74,7 +74,7 @@ public:
 	{
 		if (szCodeIndex >= listCode.size())
 		{
-			printf("致命错误：指令指针[%zu]超出索引范围[0~%zu]\n", szCodeIndex, listCode.size() - 1);
+			printf("致命错误：指令指针[%zu]超出索引范围[0~%zu)\n", szCodeIndex, listCode.size());
 			exit(-1);
 		}
 

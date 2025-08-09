@@ -1,6 +1,8 @@
 #pragma once
 
-class CharStream
+#include <stddef.h>
+
+class StrStream
 {
 private:
 	const char *pStr = NULL;
@@ -8,12 +10,12 @@ private:
 	size_t szSize = 0;
 	size_t szIndex = 0;
 public:
-	CharStream(const char *_pStr = NULL, size_t _szSize = 0, size_t _szIndex = 0) : pStr(_pStr), bEof(false), szSize(_szSize), szIndex(_szIndex)
+	StrStream(const char *_pStr = NULL, size_t _szSize = 0, size_t _szIndex = 0) : pStr(_pStr), bEof(false), szSize(_szSize), szIndex(_szIndex)
 	{}
-	~CharStream(void) = default;
+	~StrStream(void) = default;
 
-	CharStream(const CharStream &) = delete;
-	CharStream(CharStream &&_Move) noexcept :
+	StrStream(const StrStream &) = delete;
+	StrStream(StrStream &&_Move) noexcept :
 		pStr(_Move.pStr),
 		bEof(_Move.bEof),
 		szSize(_Move.szSize),
@@ -26,8 +28,8 @@ public:
 		_Move.szIndex = 0;
 	}
 	
-	CharStream &operator=(const CharStream &) = delete;
-	CharStream &operator=(CharStream &&_Move) noexcept
+	StrStream &operator=(const StrStream &) = delete;
+	StrStream &operator=(StrStream &&_Move) noexcept
 	{
 		pStr = _Move.pStr;
 		bEof = _Move.bEof;

@@ -160,7 +160,8 @@
     <ClInclude Include="IO.hpp" />
     <ClInclude Include="MemoryManager.hpp" />
     <ClInclude Include="Preprocessor.hpp" />
-    <ClInclude Include="CharStream.hpp" />
+    <ClInclude Include="StrStream.hpp" />
+    <ClInclude Include="StdStream.hpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

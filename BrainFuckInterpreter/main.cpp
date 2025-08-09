@@ -4,9 +4,9 @@
 #include <new>
 
 #define PROJECT "BrainFuckInterpreter"
-#define VERSION "1.0.2"
+#define VERSION "1.0.3"
 
-#define COPYRIGHT "CopyRight(C)"
+#define COPYRIGHT "Copyright(C)"
 #define YEAR "2025"
 #define AUTHOR "chenjunfu2"
 
@@ -31,12 +31,13 @@ void Help(void)
 		"   - 选项开头符号-与/等价\n"\
 		"\n"\
 		"命令行选项：\n"\
-		"   SELF [-g] ([-f {FileName}]/[-i {Input}])\n"\
+		"   SELF [-g] ([-f {FileName}]/[-a {Input}]/[-i])\n"\
 		"      -g        忽略未知字符，不报错\n"\
 		"      -f        从文件中打开并运行BF代码\n"\
+		"      -a        从参数中输入并运行BF代码\n"\
 		"      -i        从标准流中输入并运行BF代码\n"\
 		"      FileName  需要运行的BF代码文件名\n"\
-		"      Input     需要运行的BF代码(直接输入)\n"\
+		"      Input     需要运行的BF代码（参数中输入）\n"\
 	);
 }
 
@@ -59,10 +60,11 @@ int main(int argc, const char *argv[])
 
 	//判断命令行选项
 	bool bGetG = false;
-	bool bGetFI = false;
+	bool bGetFAI = false;
 
 	bool bIgnoreUnknownChar = false;
-	bool bIsFile = false;
+
+	Interpreter::StreamType sType = Interpreter::StreamType::Unknown;
 
 	const char *pInput = NULL;
 
@@ -88,17 +90,14 @@ int main(int argc, const char *argv[])
 			}
 			break;
 		case 'f'://输入为文件
-			{//bIsFile本身为false如果走下面的i则仍然为false，如果走这里，设置为true并fallthrough到下一个case内
-				bIsFile = true;
-			}
-			[[fallthrough]];//标记非break，消警告
-		case 'i'://输入为参数
 			{
-				if (bGetFI != false)
+				if (bGetFAI != false)
 				{
 					goto Error;
 				}
-				bGetFI = true;
+				bGetFAI = true;
+
+				sType = Interpreter::StreamType::File;
 
 				if (++i < argc)//确认下一个命令行参数存在
 				{
@@ -108,6 +107,49 @@ int main(int argc, const char *argv[])
 				{
 					--i;//无参数，回退
 				}
+
+				//要求输入必须是最后一个，其他选项必须在前面，如果现在后面还有内容，则报错
+				if (++i < argc)//如果不小于argc，那就直接走for判断退出
+				{
+					goto Error;
+				}
+			}
+			break;
+		case 'a'://输入为参数args
+			{
+				if (bGetFAI != false)
+				{
+					goto Error;
+				}
+				bGetFAI = true;
+
+				sType = Interpreter::StreamType::Str;
+
+				if (++i < argc)//确认下一个命令行参数存在
+				{
+					pInput = argv[i];//作为入参
+				}
+				else
+				{
+					--i;//无参数，回退
+				}
+
+				//要求输入必须是最后一个，其他选项必须在前面，如果现在后面还有内容，则报错
+				if (++i < argc)//如果不小于argc，那就直接走for判断退出
+				{
+					goto Error;
+				}
+			}
+			break;
+		case 'i'://输入为标准io
+			{
+				if (bGetFAI != false)
+				{
+					goto Error;
+				}
+				bGetFAI = true;
+
+				sType = Interpreter::StreamType::Std;//type为std则直接忽略pInput
 
 				//要求输入必须是最后一个，其他选项必须在前面，如果现在后面还有内容，则报错
 				if (++i < argc)//如果不小于argc，那就直接走for判断退出
@@ -127,7 +169,7 @@ int main(int argc, const char *argv[])
 
 	try
 	{
-		Interpreter itp(pInput, bIsFile, bIgnoreUnknownChar);
+		Interpreter itp(pInput, sType, bIgnoreUnknownChar);
 		itp.run();
 	}
 	catch (const std::bad_alloc &e)
@@ -136,5 +178,6 @@ int main(int argc, const char *argv[])
 		exit(-1);
 	}
 
+	putchar('\n');
 	return 0;
 }

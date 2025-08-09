@@ -44,7 +44,10 @@
     <ClInclude Include="IO.hpp">
       <Filter>头文件</Filter>
     </ClInclude>
-    <ClInclude Include="CharStream.hpp">
+    <ClInclude Include="StrStream.hpp">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="StdStream.hpp">
       <Filter>头文件</Filter>
     </ClInclude>
   </ItemGroup>

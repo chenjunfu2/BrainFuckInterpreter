@@ -2,7 +2,7 @@
 
 #include "CodeUnit.hpp"
 #include "FileStream.hpp"
-#include "CharStream.hpp"
+#include "StrStream.hpp"
 
 #include <cstdio>
 #include <vector>
@@ -12,7 +12,6 @@ template<typename StreamType>
 class Preprocessor//预处理器
 {
 private:
-	//注意szDupCount需要自行初始化！！！本函数仅递增
 	static size_t FindDuplicate(StreamType &sStream, const char cFind)
 	{
 		size_t szDupCount = 0;
@@ -38,7 +37,7 @@ private:
 	}
 public:
 	//如果该函数返回false，那么任何使用listCode进行执行的操作都是未定义行为，当然，读取失败现场是没问题的
-	static bool PreprocessInFile(StreamType &sStream, CodeList &listCode, bool bIgnoreUnknownChar = false)
+	static bool PreprocessInStream(StreamType &sStream, CodeList &listCode, bool bIgnoreUnknownChar = false)
 	{
 		if (!sStream)//文件是NULL，返回
 		{
