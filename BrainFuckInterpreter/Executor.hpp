@@ -91,10 +91,10 @@ public:
 			mMemory -= curCode.szMovOffset;
 			break;
 		case CodeUnit::AddCur:
-			*mMemory += (uint8_t)curCode.szCalcValue;
+			*mMemory += curCode.u8CalcValue;
 			break;
 		case CodeUnit::SubCur:
-			*mMemory -= (uint8_t)curCode.szCalcValue;
+			*mMemory -= curCode.u8CalcValue;
 			break;
 		case CodeUnit::OptCur:
 			io.Ouput(*mMemory);

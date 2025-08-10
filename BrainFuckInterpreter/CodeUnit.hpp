@@ -35,12 +35,14 @@ struct CodeUnit
 		LoopBeg,	//[
 		LoopEnd,	//]
 		DbgInfo,	//?
+
+		ZeroMem,	//内存置0，优化执行，不存在于代码中
 	};
 
 	Symbol enSymbol = Unknown;
 	union
 	{
-		size_t szCalcValue = 0;//计算用累计值（注意：与内存单元，也就是uint8_t进行运算，能正确进行溢出环绕，属于可预见行为）
+		uint8_t u8CalcValue = 0;//计算用累计值（注意：与内存单元，也就是uint8_t进行运算，能正确进行溢出环绕，属于可预见行为）
 		size_t szJmpIndex;//跳转用索引
 		size_t szMovOffset;//移动用偏移量
 	};
