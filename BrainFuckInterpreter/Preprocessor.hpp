@@ -222,22 +222,113 @@ private:
 	{
 		return listCode.size() < 2 + 1;
 	}
-
-
 	static bool IsOperator(CodeUnit::Symbol enSym)//判断是否是数值运算类型
 	{
 		return enSym == CodeUnit::Symbol::AddCur || enSym == CodeUnit::Symbol::SubCur;
 	}
-
 	static bool IsPointerMove(CodeUnit::Symbol enSym)//判断是否是指针运算类型
 	{
 		return enSym == CodeUnit::Symbol::NextMov || enSym == CodeUnit::Symbol::PrevMov;
 	}
-
-	static bool IsDuplicateRemoval(CodeUnit::Symbol enSym)//判断是否是需要去重的代码类型
+	static bool IsZeroMem(CodeUnit::Symbol enSym)
 	{
 		return enSym == CodeUnit::Symbol::ZeroMem;
 	}
+	static bool IsDuplicateRemoval(CodeUnit::Symbol enSym)//判断是否是需要去重的代码类型
+	{
+		return IsZeroMem(enSym);
+	}
+
+	static bool CanChangeToZeroMem(CodeUnit::Symbol enSym)//判断是否是需要优化为内存置0操作
+	{
+		return IsOperator(enSym) || IsZeroMem(enSym);
+	}
+
+
+	/*
+	循环倒数置0优化：先匹配[-]或[+]形式，替换为Z，
+	但是也要匹配[Z]，防止[[-]]之类的嵌套情况，要跑多次优化
+	然后在此基础上调用OperatorMergeOptimization去掉重复的ZZZZ以及优化后可以合并的新的点
+	*/
+	static void CountdownZeroOptimization(CodeList &listCode)
+	{
+		if (!ContainEnoughCode(listCode))//元素不足，无需优化，直接退出
+		{
+			return;
+		}
+
+		//块语句栈（存储索引）
+		std::vector<size_t> codeBlockStack;
+
+		size_t szLast = 0;//依然是快慢指针操作
+		for (size_t szCurrent = 0, szCodeSize = listCode.size(); szCurrent < szCodeSize; ++szCurrent, ++szLast)
+		{
+			if (szLast != szCurrent)
+			{
+				listCode[szLast] = std::move(listCode[szCurrent]);
+			}
+
+			if (listCode[szLast].enSymbol == CodeUnit::Symbol::LoopBeg)
+			{
+				codeBlockStack.push_back(szLast);
+				continue;
+			}
+
+			if (listCode[szLast].enSymbol != CodeUnit::Symbol::LoopEnd)
+			{
+				continue;
+			}
+
+			//现在遇到了一个LoopEnd
+			//查看codeBlockStack栈顶，检查与之匹配的LoopBeg索引与当前LoopEnd的差值
+			//如果差值刚好为2则代表可能匹配到[x]序列，判断x的类型，然后决策
+			if (szLast - codeBlockStack.back() != 2)
+			{
+				//并不是2，那么，弹出跳过
+				codeBlockStack.pop_back();
+				continue;
+			}
+
+			//很好，现在匹配一下内部的符号类型
+			if (CanChangeToZeroMem(listCode[szLast - 1].enSymbol))
+			{
+				//非常棒，这就是需要优化的部分
+				size_t szNewLast = codeBlockStack.back();
+				codeBlockStack.pop_back();
+				//内存布局举例如下：
+				//>  [  +  ]  x  x  <
+				//3  4  5  6  7  8  9
+				//   ^     ^     ^
+				//  top   lst   cur 
+
+				//现在szNewLast就是top
+				//将szNewLast的Symbol变为ZeroMem
+				listCode[szNewLast].enSymbol = CodeUnit::Symbol::ZeroMem;
+				listCode[szNewLast].szMovOffset = 0;//归零无用内存
+				//把szLast变为NewLast：设置慢指针为优化位置
+				szLast = szNewLast;
+
+				//内存布局现在如下：
+				//>  Z  x  x  x  x  <
+				//3  4  5  6  7  8  9
+				//   ^           ^
+				//  lst         cur 
+				//for在下一次递增的时候会执行操作移动到下一位并拷贝
+				continue;
+			}
+		}
+	}
+
+	/*
+	无效循环优化：判断到置0后的循环，删除它，这是没用的
+	删除后继续判断，可以删除连续的无用循环
+	*/
+	static void InvalidLoopOptimization(CodeList &listCode)
+	{
+
+	}
+
+	
 
 	static bool CanMergeOperator(CodeUnit::Symbol enTargetiSym, CodeUnit::Symbol enSourceSym)
 	{
@@ -255,7 +346,7 @@ private:
 
 	//返回值代表是否还需要保留两值（如果刚好相反合并后为0，则返回false表示可以丢弃合并）
 	template<typename T>
-	static bool Merge(CodeUnit::Symbol &enSymLeft, T &tMergeLeft, CodeUnit::Symbol &enSymRight, T &tMergeRight)
+	static bool MergeOperator(CodeUnit::Symbol &enSymLeft, T &tMergeLeft, CodeUnit::Symbol &enSymRight, T &tMergeRight)
 	{
 		if (enSymLeft == enSymRight)//符号相同，直接相加
 		{
@@ -281,8 +372,6 @@ private:
 		return true;
 	}
 
-
-
 	/*
 	合并优化原理：合并多个同类运算符的多次相同操作
 	在源对象上操作，利用快慢索引，快索引遍历代码单元
@@ -300,8 +389,7 @@ private:
 
 		//到此必然有至少2元素
 		size_t szLast = 0;
-		size_t szSize = listCode.size();
-		for (size_t szCurrent = 1; szCurrent < szSize; ++szCurrent)
+		for (size_t szCurrent = 1, szCodeSize = listCode.size(); szCurrent < szCodeSize; ++szCurrent)
 		{
 			//尝试合并
 			auto &cuLast = listCode[szLast];
@@ -309,7 +397,7 @@ private:
 			
 			if (CanMergeOperator(cuLast.enSymbol, cuCurrent.enSymbol))//合并运算符
 			{
-				if (Merge(cuLast.enSymbol, cuLast.u8CalcValue, cuCurrent.enSymbol, cuCurrent.u8CalcValue))
+				if (MergeOperator(cuLast.enSymbol, cuLast.u8CalcValue, cuCurrent.enSymbol, cuCurrent.u8CalcValue))
 				{
 					continue;//正常合并
 				}
@@ -317,7 +405,7 @@ private:
 			}
 			else if (CanMergePointerMove(cuLast.enSymbol, cuCurrent.enSymbol))//合并指针移动
 			{
-				if (Merge(cuLast.enSymbol, cuLast.szMovOffset, cuCurrent.enSymbol, cuCurrent.szMovOffset))
+				if (MergeOperator(cuLast.enSymbol, cuLast.szMovOffset, cuCurrent.enSymbol, cuCurrent.szMovOffset))
 				{
 					continue;//正常合并
 				}
@@ -343,29 +431,15 @@ private:
 			{
 				//确定一下是否还有东西可以移动
 				//理论上因为末尾有哨兵，不太可能会有这种情况，但是以防万一，对吧
-				MyAssert(szCurrent + 1 < szSize, "优化错误：在结束标记前遇到末尾！");
+				MyAssert(szCurrent + 1 < szCodeSize, "优化错误：在结束标记前遇到末尾！");
 
 				//移动当前的到头部，继续执行优化
 				listCode[szLast] = std::move(listCode[++szCurrent]);
 			}
 		}
-	}
 
-
-
-	/*
-	循环倒数置0优化：先匹配[-]或[+]形式，替换为Z，
-	但是也要匹配[Z]，防止[[-]]之类的嵌套情况，要跑多次优化
-	然后在此基础上调用OperatorMergeOptimization去掉重复的ZZZZ以及优化后可以合并的新的点
-	*/
-	static void CountdownZeroOptimization(CodeList &listCode)
-	{
-		if (!ContainEnoughCode(listCode))//元素不足，无需优化，直接退出
-		{
-			return;
-		}
-
-
+		//完成，裁剪代码到szLast + 1的位置（注意，正常情况下哨兵也会走内部处理然后移动，无需再次处理）
+		listCode.resize(szLast + 1);
 	}
 
 
@@ -374,7 +448,6 @@ private:
 	/*
 	同尾循环优化：
 	前置优化完成后，设置所有循环的跳转点，同时优化同尾循环开头跳转点为最后一个外循环的尾部
-	
 	*/
 
 	static void SameTailLoopOptimization(CodeList &listCode)
@@ -392,7 +465,8 @@ private:
 	static void Optimization(CodeList &listCode)
 	{
 		CountdownZeroOptimization(listCode);//先优化掉可以匹配的固定模式
-		OperatorMergeOptimization(listCode);//然后进行操作去重优化
+		InvalidLoopOptimization(listCode);//然后优化掉无效循环（置0后立刻循环）
+		OperatorMergeOptimization(listCode);//接着进行操作去重优化
 		SameTailLoopOptimization(listCode);//最后进行循环优化，同时设置循环跳转关系
 	}
 
@@ -417,9 +491,51 @@ public:
 
 		return true;
 	}
+
+	static void PrintCodeList(const CodeList &listCode)
+	{
+		for (const auto &it : listCode)
+		{
+			switch (it.enSymbol)
+			{
+			case CodeUnit::NextMov:
+			case CodeUnit::PrevMov:
+				{
+					printf("%s%zu ", CodeUnit::BfCodeChar[it.enSymbol], it.szMovOffset);
+				}
+				break;
+			case CodeUnit::AddCur:
+			case CodeUnit::SubCur:
+				{
+					printf("%s%zu ", CodeUnit::BfCodeChar[it.enSymbol], it.u8CalcValue);
+				}
+				break;
+			case CodeUnit::ProgEnd:
+			case CodeUnit::OptCur:
+			case CodeUnit::IptCur:
+			case CodeUnit::LoopBeg:
+			case CodeUnit::LoopEnd:
+			case CodeUnit::DbgInfo:
+			case CodeUnit::ZeroMem:
+				{
+					printf("%s ", CodeUnit::BfCodeChar[it.enSymbol]);
+				}
+				break;
+			case CodeUnit::Unknown:
+			default:
+				break;
+			}
+		}
+	}
+
+
 	//预处理器报错有待完善
 
 	//预处理器优化有待完善（比如识别经典归0，来回移动，递增递减抵消，无用嵌套抵消等）
+
+
+
+
 
 };
 

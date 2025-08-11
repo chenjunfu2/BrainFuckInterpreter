@@ -22,9 +22,24 @@ struct CodeUnit
 		?		输出当前内存单元格信息(地址(0基索引)+值(十六进制))
 		#		到下一行为止都忽略
 	*/
+	static const inline char *BfCodeChar[] =
+	{
+		"END",
+		">",
+		"<",
+		"+",
+		"-",
+		".",
+		",",
+		"[",
+		"]",
+		"?",
+		"ZRM",
+	};
+
 	enum Symbol : uint8_t
 	{
-		Unknown = 0,//未知（正常无用）
+		Unknown = -1,//未知（正常无用）
 		ProgEnd = 0,//特殊标记，程序结束
 		NextMov,	//>
 		PrevMov,	//<
