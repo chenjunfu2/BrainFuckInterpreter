@@ -491,6 +491,10 @@ private:
 
 	static void Optimization(CodeList &listCode)
 	{
+		//需要修改为返回是否进行了至少一次优化
+		//然后按顺序运行，直到某一遍所有的函数
+		//都返回false，代表没有更多可以优化的了
+
 		CountdownZeroOptimization(listCode);//先优化掉可以匹配的固定模式
 		InvalidLoopOptimization(listCode);//然后优化掉无效循环（置0后立刻循环）
 		OperatorMergeOptimization(listCode);//接着进行操作去重优化
