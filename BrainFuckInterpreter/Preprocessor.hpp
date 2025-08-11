@@ -36,7 +36,7 @@ private:
 	//	return szDupCount;
 	//}
 
-	static bool ZeroPreprocess(StreamType &sStream, CodeList &listCode, bool bIgnoreUnknownChar = false)
+	static bool NoOptimizationPreprocess(StreamType &sStream, CodeList &listCode, bool bIgnoreUnknownChar)
 	{
 		if (!sStream)//文件是NULL，返回
 		{
@@ -217,14 +217,26 @@ private:
 	}
 
 
-	static bool IsOperator(CodeUnit::Symbol enSym)
+	//判断是否拥有足够多的打码来进行优化，至少2个。为什么要+1？因为有结尾哨兵标记ProgEnd占用1空间
+	static bool ContainEnoughCode(CodeList &listCode)
+	{
+		return listCode.size() < 2 + 1;
+	}
+
+
+	static bool IsOperator(CodeUnit::Symbol enSym)//判断是否是数值运算类型
 	{
 		return enSym == CodeUnit::Symbol::AddCur || enSym == CodeUnit::Symbol::SubCur;
 	}
 
-	static bool IsPointerMove(CodeUnit::Symbol enSym)
+	static bool IsPointerMove(CodeUnit::Symbol enSym)//判断是否是指针运算类型
 	{
 		return enSym == CodeUnit::Symbol::NextMov || enSym == CodeUnit::Symbol::PrevMov;
+	}
+
+	static bool IsDuplicateRemoval(CodeUnit::Symbol enSym)//判断是否是需要去重的代码类型
+	{
+		return enSym == CodeUnit::Symbol::ZeroMem;
 	}
 
 	static bool CanMergeOperator(CodeUnit::Symbol enTargetiSym, CodeUnit::Symbol enSourceSym)
@@ -235,152 +247,172 @@ private:
 	{
 		return IsPointerMove(enTargetiSym) && IsPointerMove(enSourceSym);//都是指针操作
 	}
-
-
-	static bool FirstOptimization(CodeList &listCode)//返回是否进行了至少1次优化
+	static bool HasDuplicates(CodeUnit::Symbol enTargetiSym, CodeUnit::Symbol enSourceSym)
 	{
-		bool bIsOpti = false;
+		return IsDuplicateRemoval(enTargetiSym) && enTargetiSym == enSourceSym;//都是需要去重的类型并且相等
+	}
 
-		CodeList listOptiCode{};
-		bool bPushNew = true;//第一下让它插入一个元素防止listOptiCode.back炸掉
-		for (auto &it : listCode)//补药再说什么size循环调用有开销了，编译器能优化的啊哥哥
+
+	//返回值代表是否还需要保留两值（如果刚好相反合并后为0，则返回false表示可以丢弃合并）
+	template<typename T>
+	static bool Merge(CodeUnit::Symbol &enSymLeft, T &tMergeLeft, CodeUnit::Symbol &enSymRight, T &tMergeRight)
+	{
+		if (enSymLeft == enSymRight)//符号相同，直接相加
 		{
-			if (bPushNew)
-			{
-				listOptiCode.push_back(it);//插入一个新的并迭代到下一个
-				bPushNew = false;
-				continue;
-			}
+			tMergeLeft += tMergeRight;
+			return true;
+		}
 
+		//符号不同，比大小
+		if (tMergeLeft > tMergeRight)//当前更大
+		{
+			tMergeLeft -= tMergeRight;//当前异号直接做差，不需要注意正负（数学可证）
+		}
+		else if (tMergeLeft < tMergeRight)//当前更小（需要反转）
+		{
+			tMergeLeft = tMergeRight - tMergeLeft;
+			enSymLeft = enSymRight;//改变符号
+		}
+		else//相等且异号，直接消除
+		{
+			return false;
+		}
+
+		return true;
+	}
+
+
+
+	/*
+	合并优化原理：合并多个同类运算符的多次相同操作
+	在源对象上操作，利用快慢索引，快索引遍历代码单元
+	慢索引每次尝试合并快索引上的同类单元，成功慢索引不变
+	否则慢索引递增并拷贝快索引上的单元到慢索引位置，
+	快慢索引之间的区域就是被优化掉的区域，慢索引会慢慢往后覆盖，
+	直到快索引遇到代码单元列表的结尾，裁切直到慢索引的位置，优化结束
+	*/
+	static void OperatorMergeOptimization(CodeList &listCode)//返回是否进行了至少1次优化
+	{
+		if (!ContainEnoughCode(listCode))//元素不足，无需优化，直接退出
+		{
+			return;
+		}
+
+		//到此必然有至少2元素
+		size_t szLast = 0;
+		size_t szSize = listCode.size();
+		for (size_t szCurrent = 1; szCurrent < szSize; ++szCurrent)
+		{
 			//尝试合并
-			auto &cuLast = listOptiCode.back();
+			auto &cuLast = listCode[szLast];
+			auto &cuCurrent = listCode[szCurrent];
 			
-			if (CanMergeOperator(cuLast.enSymbol, it.enSymbol))//合并运算符
+			if (CanMergeOperator(cuLast.enSymbol, cuCurrent.enSymbol))//合并运算符
 			{
-				bIsOpti = true;
-				if (cuLast.enSymbol != it.enSymbol)//符号不同，比大小
+				if (Merge(cuLast.enSymbol, cuLast.u8CalcValue, cuCurrent.enSymbol, cuCurrent.u8CalcValue))
 				{
-					if (cuLast.u8CalcValue > it.u8CalcValue)//当前更大
-					{
-						cuLast.u8CalcValue -= it.u8CalcValue;//当前异号直接做差，不需要注意正负（数学可证）
-					}
-					else if(cuLast.u8CalcValue < it.u8CalcValue)//当前更小（需要反转）
-					{
-						cuLast.u8CalcValue = it.u8CalcValue - cuLast.u8CalcValue;
-						cuLast.enSymbol = it.enSymbol;
-					}
-					else//相等且异号，直接消除
-					{
-						listOptiCode.pop_back();//删除末尾且不插入当前值
-						bPushNew = true;
-					}
+					continue;//正常合并
 				}
-				else//符号相同，直接相加
-				{
-					cuLast.u8CalcValue += it.u8CalcValue;
-				}
+				//合并抵消，走外部处理
 			}
-			else if (CanMergePointerMove(cuLast.enSymbol, it.enSymbol))//合并指针移动
+			else if (CanMergePointerMove(cuLast.enSymbol, cuCurrent.enSymbol))//合并指针移动
 			{
-				bIsOpti = true;
-				if (cuLast.enSymbol != it.enSymbol)//符号不同，比大小
+				if (Merge(cuLast.enSymbol, cuLast.szMovOffset, cuCurrent.enSymbol, cuCurrent.szMovOffset))
 				{
-					if (cuLast.szMovOffset > it.szMovOffset)//当前更大
-					{
-						cuLast.szMovOffset -= it.szMovOffset;//当前异号直接做差，不需要注意正负（数学可证）
-					}
-					else if (cuLast.szMovOffset < it.szMovOffset)//当前更小（需要反转）
-					{
-						cuLast.szMovOffset = it.szMovOffset - cuLast.szMovOffset;
-						cuLast.enSymbol = it.enSymbol;
-					}
-					else//相等且异号，直接消除
-					{
-						listOptiCode.pop_back();//删除末尾且不插入当前值
-						bPushNew = true;
-					}
+					continue;//正常合并
 				}
-				else//符号相同，直接相加
-				{
-					cuLast.szMovOffset += it.szMovOffset;
-				}
+				//合并抵消，走外部处理
+			}
+			else if (HasDuplicates(cuLast.enSymbol, cuCurrent.enSymbol))//去重操作
+			{
+				continue;//直接继续直到任意一个不匹配
 			}
 			else//无法合并
 			{
-				listOptiCode.push_back(it);//直接插入，注意不要设置标志位，以便下一个循环判断
+				//移动并处理下一个
+				listCode[++szLast] = std::move(listCode[szCurrent]);
+				continue;//注意这里必须提前continue，不需要走下面的合并抵消处理
+			}
+
+			//合并后抵消，需要丢弃值
+			if (szLast > 0)
+			{
+				--szLast;//让慢索引移动到上一个单元（如果有），这样下一个快索引单元就能尝试与上一个合并
+			}
+			else//到头了，寄，只能尝试递增快索引并移动到当前（0）后继续
+			{
+				//确定一下是否还有东西可以移动
+				//理论上因为末尾有哨兵，不太可能会有这种情况，但是以防万一，对吧
+				MyAssert(szCurrent + 1 < szSize, "优化错误：在结束标记前遇到末尾！");
+
+				//移动当前的到头部，继续执行优化
+				listCode[szLast] = std::move(listCode[++szCurrent]);
 			}
 		}
+	}
 
-		//完成
-		if (bIsOpti)//至少进行一次优化，这覆盖原先的代码
+
+
+	/*
+	循环倒数置0优化：先匹配[-]或[+]形式，替换为Z，
+	但是也要匹配[Z]，防止[[-]]之类的嵌套情况，要跑多次优化
+	然后在此基础上调用OperatorMergeOptimization去掉重复的ZZZZ以及优化后可以合并的新的点
+	*/
+	static void CountdownZeroOptimization(CodeList &listCode)
+	{
+		if (!ContainEnoughCode(listCode))//元素不足，无需优化，直接退出
 		{
-			listCode = std::move(listOptiCode);
-		}//如果没有任何优化，直接自动析构
+			return;
+		}
 
-		return bIsOpti;
+
 	}
 
-	static bool SecondOptimization(CodeList &listCode)//返回是否进行了至少1次优化
+
+
+
+	/*
+	同尾循环优化：
+	前置优化完成后，设置所有循环的跳转点，同时优化同尾循环开头跳转点为最后一个外循环的尾部
+	
+	*/
+
+	static void SameTailLoopOptimization(CodeList &listCode)
 	{
-
-
-
+		if (!ContainEnoughCode(listCode))//元素不足，无需优化，直接退出
+		{
+			return;
+		}
 
 
 	}
 
 
 
-
-
-	static bool FirstPreprocess(CodeList &listCode)//返回是否成功
+	static void Optimization(CodeList &listCode)
 	{
-
+		CountdownZeroOptimization(listCode);//先优化掉可以匹配的固定模式
+		OperatorMergeOptimization(listCode);//然后进行操作去重优化
+		SameTailLoopOptimization(listCode);//最后进行循环优化，同时设置循环跳转关系
 	}
-
-	static bool SecondPreprocess(CodeList &listCode)//返回是否成功
-	{
-
-	}
-
 
 
 public:
-	enum PreprocessLevel :uint8_t
-	{
-		Level_Min = 0,
-		Level_Zero = Level_Min,
-		Level_First,
-		Level_Second,
-		Level_Max = Level_Second,
-	};
 
 	//如果该函数返回false，那么任何使用listCode进行执行的操作都是未定义行为，当然，读取失败现场是没问题的
-	static bool PreprocessInStream(StreamType &sStream, CodeList &listCode, bool bIgnoreUnknownChar = false, PreprocessLevel enLevel = Level_Max)
+	static bool PreprocessInStream(StreamType &sStream, CodeList &listCode, bool bIgnoreUnknownChar, bool bOptimization = true)
 	{
-		if (enLevel >= Level_Zero)
+		//先进性无优化预处理（调试分析用）
+		if (!NoOptimizationPreprocess(sStream, listCode, bIgnoreUnknownChar))
 		{
-			if (!ZeroPreprocess(sStream, listCode, bIgnoreUnknownChar))
-			{
-				return false;
-			}
+			return false;
 		}
 
-		if (enLevel >= Level_First)
+		//如果设置了优化，则跑优化处理
+		if (bOptimization)
 		{
-			if (!FirstPreprocess(listCode))
-			{
-				return false;
-			}
-
-		}
-
-		if (enLevel >= Level_Second)
-		{
-			if (!SecondPreprocess(listCode))
-			{
-				return false;
-			}
+			//注意：任何形式的优化都会导致循环跳转索引失效，所以Optimization会在最后重设
+			Optimization(listCode);
 		}
 
 		return true;
@@ -400,8 +432,7 @@ public:
 
 
 - 第一次优化：合并连续的所有运算操作或所有指针操作，
-	比如+++变为+3，同时+3 -1变成+2，>>>变成>3，同时>3 <3直接抵消，
-	因为存在抵消导致合并其他项可以继续优化的情况，所以需要循环直到无法优化为止
+	比如+++变为+3，同时+3 -1变成+2，>>>变成>3，同时>3 <3直接抵消
 - 第二次优化：处理连续循环结尾，去掉所有诸如[-]、[+]的归零操作，变为直接操作
 	此操作后可能导致新的合并，需要重复第一次优化和本次优化
 
