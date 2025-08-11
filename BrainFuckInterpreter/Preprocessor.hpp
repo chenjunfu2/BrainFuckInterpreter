@@ -218,7 +218,7 @@ private:
 
 
 	//判断是否拥有足够多的打码来进行优化，至少2个。为什么要+1？因为有结尾哨兵标记ProgEnd占用1空间
-	static bool ContainEnoughCode(CodeList &listCode)
+	static bool ContainsEnoughCode(CodeList &listCode)
 	{
 		return listCode.size() < 2 + 1;
 	}
@@ -252,7 +252,7 @@ private:
 	*/
 	static void CountdownZeroOptimization(CodeList &listCode)
 	{
-		if (!ContainEnoughCode(listCode))//元素不足，无需优化，直接退出
+		if (!ContainsEnoughCode(listCode))//元素不足，无需优化，直接退出
 		{
 			return;
 		}
@@ -290,7 +290,8 @@ private:
 			}
 
 			//很好，现在匹配一下内部的符号类型
-			if (CanChangeToZeroMem(listCode[szLast - 1].enSymbol))
+			if (CanChangeToZeroMem(listCode[szLast - 1].enSymbol) &&
+				listCode[szLast - 1].u8CalcValue == 1)//必须保证u8CalcValue是1，否则可能导致[++]之类的操作不符合预期
 			{
 				//非常棒，这就是需要优化的部分
 				size_t szNewLast = codeBlockStack.back();
@@ -321,10 +322,36 @@ private:
 
 	/*
 	无效循环优化：判断到置0后的循环，删除它，这是没用的
+	无意义的嵌套循环删除：[[[[[++>++<<--]]]]]
 	删除后继续判断，可以删除连续的无用循环
+
+	本函数难度较大，需要多种模式匹配
 	*/
 	static void InvalidLoopOptimization(CodeList &listCode)
 	{
+		if (!ContainsEnoughCode(listCode))//元素不足，无需优化，直接退出
+		{
+			return;
+		}
+
+		size_t szLast = 0;//依然是快慢指针操作
+		for (size_t szCurrent = 0, szCodeSize = listCode.size(); szCurrent < szCodeSize; ++szCurrent, ++szLast)
+		{
+			if (szLast != szCurrent)
+			{
+				listCode[szLast] = std::move(listCode[szCurrent]);
+			}
+
+
+
+
+
+
+		}
+
+
+
+
 
 	}
 
@@ -382,7 +409,7 @@ private:
 	*/
 	static void OperatorMergeOptimization(CodeList &listCode)//返回是否进行了至少1次优化
 	{
-		if (!ContainEnoughCode(listCode))//元素不足，无需优化，直接退出
+		if (!ContainsEnoughCode(listCode))//元素不足，无需优化，直接退出
 		{
 			return;
 		}
@@ -452,7 +479,7 @@ private:
 
 	static void SameTailLoopOptimization(CodeList &listCode)
 	{
-		if (!ContainEnoughCode(listCode))//元素不足，无需优化，直接退出
+		if (!ContainsEnoughCode(listCode))//元素不足，无需优化，直接退出
 		{
 			return;
 		}
