@@ -181,4 +181,190 @@ public:
 
 		return i64FileSize;
 	}
+
+	//字节序转换
+
+	//tType目标类型 pData数据 bDataIsBigEndian数据本身的顺序是否为大端字节序
+	//调用者需要保证pData大小至少为sizeof(T)
+	template<typename T>
+	static void ConvertEndianData2Type(T &tType, const uint8_t *pData, bool bDataIsBigEndian)//转换字节数据到类型内
+	{
+		static constexpr size_t szTypeByte = sizeof(tType);
+
+		if constexpr (szTypeByte == sizeof(uint8_t))//如果类型本身就是1字节则直接赋值
+		{
+			tType = (T)pData[0];
+		}
+		else
+		{
+			tType = 0;//置空
+			if (bDataIsBigEndian)
+			{
+				for (long i = 0; i < szTypeByte; ++i)//正序遍历
+				{
+					tType <<= 8;//移动一字节
+					tType |= (T)pData[i];//放在最低字节
+				}
+			}
+			else
+			{
+				for (long i = szTypeByte - 1; i >= 0; --i)//倒序遍历
+				{
+					tType <<= 8;//移动一字节
+					tType |= (T)pData[i];//放在最高字节
+				}
+			}
+		}
+	}
+
+	//pData目标数据 tType类型 bDataIsBigEndian数据最终需要的顺序是否为大端字节序
+	//调用者需要保证pData大小至少为sizeof(T)
+	template<typename T>
+	static void ConvertEndianType2Data(uint8_t *pData, const T &tType, bool bDataNeedBigEndian)//转换类型为字节数据
+	{
+		constexpr size_t szTypeByte = sizeof(tType);
+
+		if constexpr (szTypeByte == sizeof(uint8_t))//如果类型本身就是1字节则直接赋值
+		{
+			pData[0] = (uint8_t)tType;
+		}
+		else
+		{
+			//保存临时变量
+			T tTypeTemp = tType;
+			if (bDataNeedBigEndian)
+			{
+				for (long i = szTypeByte - 1; i >= 0; --i)//倒序遍历
+				{
+					pData[i] = (uint8_t)tTypeTemp;//截断高字节
+					tTypeTemp >>= 8;//右移一字节
+				}
+			}
+			else
+			{
+				for (long i = 0; i < szTypeByte; ++i)//正序遍历
+				{
+					pData[i] = (uint8_t)tTypeTemp;//截断高字节
+					tTypeTemp >>= 8;//右移一字节
+				}
+			}
+		}
+	}
+
+	template<typename T>
+	bool ReadWithEndian(T &tData, bool bDataNeedBigEndian)
+	{
+		if constexpr (sizeof(T) == sizeof(uint8_t))
+		{
+			//直接读入数据
+			if (Read(tData) != sizeof(T))
+			{
+				return false;
+			}
+		}
+		else
+		{
+			//读取数据
+			uint8_t u8ReadData[sizeof(T)];
+			if (Read(u8ReadData) != sizeof(u8ReadData))
+			{
+				return false;
+			}
+			//转换字节序
+			ConvertEndianData2Type<T>(tData, u8ReadData, bDataNeedBigEndian);
+		}
+
+		return true;
+	}
+
+	template<typename T>
+	bool WriteWithEndian(const T &tData, bool bDataNeedBigEndian)
+	{
+		if constexpr (sizeof(T) == sizeof(uint8_t))
+		{
+			//直接写入数据
+			if (Write != sizeof(T))
+			{
+				return false;
+			}
+		}
+		else
+		{
+			//转换字节序
+			uint8_t u8WriteData[sizeof(T)];
+			ConvertEndianType2Data<T>(u8WriteData, tData, bDataNeedBigEndian);
+
+			//写入数据
+			if (Write(u8WriteData) != sizeof(u8WriteData))
+			{
+				return false;
+			}
+		}
+
+		return true;
+	}
+
+	template<typename T>
+	bool ReadWithEndian(T *tArr, size_t szArrLen, bool bDataNeedBigEndian)
+	{
+		//两种情况处理，每个元素大小等于一字节的数组直接读入数组，否则对每个字节的字节序进行变换
+		if constexpr (sizeof(T) == sizeof(uint8_t))
+		{
+			if (Read(tArr, szArrLen * sizeof(T)) != szArrLen * sizeof(T))
+			{
+				return false;
+			}
+		}
+		else
+		{
+			for (size_t i = 0; i < szArrLen; ++i)
+			{
+				if (!ReadWithEndian<T>(tArr[i], bDataNeedBigEndian))
+				{
+					return false;
+				}
+			}
+		}
+
+		return true;
+	}
+
+	template<typename T>
+	bool WriteWithEndian(const T *tArr, size_t szArrLen, bool bDataNeedBigEndian)
+	{
+		//两种情况处理，每个元素大小等于一字节的数组直接写入文件，否则对每个字节的字节序进行变换
+		if constexpr (sizeof(T) == sizeof(uint8_t))
+		{
+			if (Write(tArr, szArrLen * sizeof(T)) != szArrLen * sizeof(T))
+			{
+				return false;
+			}
+		}
+		else
+		{
+			for (size_t i = 0; i < szArrLen; ++i)
+			{
+				if (!WriteWithEndian<T>(tArr[i], bDataNeedBigEndian))
+				{
+					return false;
+				}
+			}
+		}
+
+		return true;
+	}
+
+	//转发调用，数组自动求大小套模板
+	template<typename T, size_t N>
+	bool WriteWithEndian(const T(&tArr)[N], bool bDataNeedBigEndian)
+	{
+		WriteWithEndian(tArr, N, bDataNeedBigEndian);
+	}
+
+	//转发调用，数组自动求大小套模板
+	template<typename T, size_t N>
+	bool ReadWithEndian(T(&tArr)[N], bool bDataNeedBigEndian)
+	{
+		ReadWithEndian(tArr, N, bDataNeedBigEndian);
+	}
 };

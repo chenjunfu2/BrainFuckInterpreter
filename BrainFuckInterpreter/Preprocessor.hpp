@@ -453,6 +453,9 @@ private:
 			return;
 		}
 
+		//块语句栈（存储索引）
+		std::vector<size_t> codeBlockStack;
+
 		size_t szLast = 0;//依然是快慢指针操作
 		for (size_t szCurrent = 0, szCodeSize = listCode.size(); szCurrent < szCodeSize; ++szCurrent, ++szLast)
 		{
@@ -460,6 +463,56 @@ private:
 			{
 				listCode[szLast] = std::move(listCode[szCurrent]);
 			}
+
+			if (listCode[szLast].enSymbol == CodeUnit::Symbol::LoopBeg)
+			{
+				codeBlockStack.push_back(szLast);
+				continue;
+			}
+
+			if (listCode[szLast].enSymbol != CodeUnit::Symbol::LoopEnd)
+			{
+				continue;
+			}
+
+			MyAssert(!codeBlockStack.empty(), "优化失败：块语句栈意外为空！");//怎么会这样呢？明明前面已经匹配完成了呢？
+
+			/*
+			对于每一个LoopEnd，检测codeBlockStack与之对应的LoopBeg前一个LoopBeg，如果差距为1，则代表相邻LoopBeg，
+			往后提前读取1个CodeUnit并查看是否为LoopEnd，若是，继续在codeBlockStack中往前查看下一个LoopBeg是否与现在的LoopBeg差距为1，
+			且后一个CodeUnit是LoopEnd，是则继续循环，直到某一条件不满足，移动所有匹配到的最内层循环到codeBlockStack中最左侧需要删除的外层
+			并将szLast移动到最内层的LoopEnd在移动后的最后位置（注意不是最后位置的之后一个，因为for会往后递增帮忙移动），
+			完成连续嵌套无用循环优化
+			
+			同时，如果当前LoopEnd对应的LoopBeg前一个CodeUnit为ZeroMem，则删除整段循环，注意此优化在前面优化完后检测
+			*/
+
+			//获取栈顶索引，开始连续检测
+			//此处至少保证栈顶有1个元素
+			size_t szStackTop = codeBlockStack.size() - 1;
+			//获取当前位置，注意是往后一格的，因为listCode[szLast] = std::move(listCode[szCurrent]);
+			//已经移动的对象不应访问，而szLast已经确认是LoopEnd才会到这里，无需再次使用
+			size_t szNewCurrent = szCurrent + 1;//这里切勿递增szCurrent，除非明确消耗掉下一个CodeUnit，因为for会递增
+
+			//如果这时候栈顶已经是0，没有任何可以消耗的内容了，那么，可以跳过了
+			//或者，如果szNewCurrent已经>= szCodeSize的话，后面也没有可以消耗的内容了，可以跳过了
+			//这也解释了为什么前面不是codeBlockStack.size() - 2而是- 1，因为更前面的MyAssert(!codeBlockStack.empty(), ...);
+			//只能保证有1单元，通过这里的检测后，才能往前继续访问1单元
+			if (szStackTop == 0 || szNewCurrent >= szCodeSize)
+			{
+				continue;
+			}
+
+			//判断现在已经配对的循环头前与尾后是否有相邻的循环，是，继续判断直到全部优化
+			//然后在移动代码前，检测一下最开头的是不是ZeroMem，如果是，全部丢弃，
+			//szLast移动到ZeroMem前一个单元，如果无法移动（已经是0索引），
+			//拷贝当前szCurrent+1位置的代码，如果szCurrent+1 >= szCodeSize，
+			//直接触发MyAssert，因为至少要有一个末尾卫兵字符ProgEnd存在，此处非预期，程序结束
+
+
+
+
+
 
 
 
@@ -525,42 +578,23 @@ public:
 			Optimization(listCode);
 		}
 
+		//最后的最后，一定要再次检测末尾是否有ProgEnd，如果没有，报错，不要强制修复，说明内部出现问题
+		//这里使用for短路求值，如果已经为空则不会访问back导致out of range炸掉
+		if (listCode.empty() || listCode.back().enSymbol != CodeUnit::Symbol::ProgEnd)
+		{
+			printf("预处理错误：代码意外为空或丢失末尾字符！");
+			return false;
+		}
+
 		return true;
 	}
 
 	static void PrintCodeList(const CodeList &listCode)
 	{
+		FileStream fsStdout(stdout, false);
 		for (const auto &it : listCode)
 		{
-			switch (it.enSymbol)
-			{
-			case CodeUnit::NextMov:
-			case CodeUnit::PrevMov:
-				{
-					printf("%s%zu ", CodeUnit::BfCodeChar[it.enSymbol], it.szMovOffset);
-				}
-				break;
-			case CodeUnit::AddCur:
-			case CodeUnit::SubCur:
-				{
-					printf("%s%zu ", CodeUnit::BfCodeChar[it.enSymbol], it.u8CalcValue);
-				}
-				break;
-			case CodeUnit::ProgEnd:
-			case CodeUnit::OptCur:
-			case CodeUnit::IptCur:
-			case CodeUnit::LoopBeg:
-			case CodeUnit::LoopEnd:
-			case CodeUnit::DbgInfo:
-			case CodeUnit::ZeroMem:
-				{
-					printf("%s ", CodeUnit::BfCodeChar[it.enSymbol]);
-				}
-				break;
-			case CodeUnit::Unknown:
-			default:
-				break;
-			}
+			it.PrintToStream(fsStdout);
 		}
 	}
 

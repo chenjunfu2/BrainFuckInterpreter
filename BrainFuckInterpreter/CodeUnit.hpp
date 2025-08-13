@@ -1,22 +1,24 @@
 #pragma once
 
+#include "FileStream.hpp"
+
 #include <cstdint>
 #include <vector>
 
-struct CodeUnit
+struct CodeUnit//代码单元，执行器用
 {
 	/*
 		BrainFuck
 
 		符号		含义
-		>		指针加一
-		<		指针减一
 		+		指针指向的字节的值加一
 		-		指针指向的字节的值减一
+		>		指针加一
+		<		指针减一
+		[		如果指针指向的单元值为零，向后跳转到对应的]指令的次一指令处
+		]		向前跳转到对应的[指令处
 		.		输出指针指向的单元内容（ASCⅡ码）
 		,		输入内容到指针指向的单元（ASCⅡ码）
-		[		如果指针指向的单元值为零，向后跳转到对应的]指令的次一指令处
-		]		如果指针指向的单元值不为零，向前跳转到对应的[指令的次一指令处
 
 		下为新增
 		?		输出当前内存单元格信息(地址(0基索引)+值(十六进制))
@@ -37,18 +39,19 @@ struct CodeUnit
 		"ZRM",
 	};
 
+	//做完虚拟码编译后此处只能新增不能修改顺序
 	enum Symbol : uint8_t
 	{
 		Unknown = -1,//未知（正常无用）
 		ProgEnd = 0,//特殊标记，程序结束
-		NextMov,	//>
-		PrevMov,	//<
 		AddCur,		//+
 		SubCur,		//-
-		OptCur,		//.
-		IptCur,		//,
+		NextMov,	//>
+		PrevMov,	//<
 		LoopBeg,	//[
 		LoopEnd,	//]
+		OptCur,		//.
+		IptCur,		//,
 		DbgInfo,	//?
 
 		ZeroMem,	//内存置0，优化执行，不存在于代码中
@@ -57,10 +60,193 @@ struct CodeUnit
 	Symbol enSymbol = Unknown;
 	union
 	{
-		uint8_t u8CalcValue = 0;//计算用累计值（注意：与内存单元，也就是uint8_t进行运算，能正确进行溢出环绕，属于可预见行为）
-		size_t szJmpIndex;//跳转用索引
+		uint8_t u8CalcValue;//计算用累计值（注意：与内存单元，也就是uint8_t进行运算，能正确进行溢出环绕，属于可预见行为）
 		size_t szMovOffset;//移动用偏移量
+		size_t szJmpIndex = 0;//跳转用索引
 	};
+public:
+	enum Activity : uint8_t
+	{
+		ACT_Unknown = -1,
+		ACT_NULL = 0,
+		ACT_u8CalcValue,
+		ACT_szMovOffset,
+		ACT_szJmpIndex,
+	};
+
+	//获取活动成员，从enSymbol中
+	Activity GetActivityMember(void) const
+	{
+		switch (enSymbol)
+		{
+		case Symbol::AddCur:
+		case Symbol::SubCur:
+			{
+				return ACT_u8CalcValue;
+			}
+			break;
+		case Symbol::NextMov:
+		case Symbol::PrevMov:
+			{
+				return ACT_szMovOffset;
+			}
+			break;
+		case Symbol::LoopBeg:
+		case Symbol::LoopEnd:
+			{
+				return ACT_szJmpIndex;
+			}
+			break;
+		
+		case Symbol::ProgEnd:
+		case Symbol::OptCur:
+		case Symbol::IptCur:
+		case Symbol::DbgInfo:
+		case Symbol::ZeroMem:
+			{
+				return ACT_NULL;
+			}
+			break;
+		case Symbol::Unknown:
+		default:
+			{
+				return ACT_Unknown;
+			}
+			break;
+		}
+
+		return ACT_Unknown;
+	}
+	
+public:
+	bool Write(FileStream &fsWrite, bool bIsBigEndian = true) const
+	{
+		//Symbol是uint8，直接写
+		if (!fsWrite.WriteWithEndian(enSymbol, bIsBigEndian))
+		{
+			return false;
+		}
+		
+		Activity actMemb = GetActivityMember();
+		switch (actMemb)
+		{
+		case Activity::ACT_u8CalcValue:
+			{
+				if (!fsWrite.WriteWithEndian(u8CalcValue, bIsBigEndian))
+				{
+					return false;
+				}
+			}
+			break;
+		case Activity::ACT_szMovOffset:
+			{
+				if (fsWrite.WriteWithEndian(szMovOffset, bIsBigEndian))
+				{
+					return false;
+				}
+			}
+			break;
+		case Activity::ACT_szJmpIndex:
+			{
+				if (fsWrite.WriteWithEndian(szJmpIndex, bIsBigEndian))
+				{
+					return false;
+				}
+			}
+			break;
+		case Activity::ACT_Unknown:
+		case Activity::ACT_NULL:
+		default:
+			{
+				//什么也不做
+			}
+			break;
+		}
+
+		return true;
+	}
+
+	bool Read(FileStream &fsRead, bool bIsBigEndian = true)
+	{
+		//u8直接读取
+		if (!fsRead.ReadWithEndian(enSymbol, bIsBigEndian))
+		{
+			return false;
+		}
+		// 现在enSymbol已经在当前结构内，可以直接调用GetActivityMember判断
+		Activity actMemb = GetActivityMember();
+		switch (actMemb)
+		{
+		case Activity::ACT_u8CalcValue:
+			{
+				if (!fsRead.ReadWithEndian(u8CalcValue, bIsBigEndian))
+				{
+					return false;
+				}
+			}
+			break;
+		case Activity::ACT_szMovOffset:
+			{
+				if (!fsRead.ReadWithEndian(szMovOffset, bIsBigEndian))
+				{
+					return false;
+				}
+			}
+			break;
+		case Activity::ACT_szJmpIndex:
+			{
+				if (fsRead.ReadWithEndian(szJmpIndex, bIsBigEndian))
+				{
+					return false;
+				}
+			}
+			break;
+		case Activity::ACT_Unknown:
+		case Activity::ACT_NULL:
+		default:
+			{
+				//什么也不做
+			}
+			break;
+		}
+
+
+	}
+
+	void PrintToStream(FileStream &fsPrint) const//FileStream可以打开标准流或文件，方便输出
+	{
+		Activity actMemb = GetActivityMember();
+		switch (actMemb)
+		{
+		case Activity::ACT_u8CalcValue:
+			{
+				printf("%s%u ", BfCodeChar[enSymbol], u8CalcValue);
+			}
+			break;
+		case Activity::ACT_szMovOffset:
+			{
+				printf("%s%zu ", BfCodeChar[enSymbol], szMovOffset);
+			}
+			break;
+		case Activity::ACT_szJmpIndex:
+			{
+				printf("%s%zu ", BfCodeChar[enSymbol], szJmpIndex);
+			}
+			break;
+		case Activity::ACT_NULL:
+			{
+				printf("%s ", BfCodeChar[enSymbol]);
+			}
+			break;
+		case Activity::ACT_Unknown:
+		default:
+			{
+				printf("UNNOWN ");
+			}
+			break;
+		}
+
+	}
 };
 
 using CodeList = std::vector<CodeUnit>;
