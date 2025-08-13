@@ -767,6 +767,8 @@ private:
 
 		//因为至少要进行一次优化且必须要保证优化按顺序调用直到全部false
 		//所以避免短路求值问题，使用bool值保存
+		PrintCodeList(listCode, "", "\n");
+
 		while (true)
 		{
 			bool b0 = CountdownZeroOptimization(listCode);//先优化掉可以匹配的固定模式

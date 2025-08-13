@@ -159,6 +159,7 @@
     <ClInclude Include="FileStream.hpp" />
     <ClInclude Include="IO.hpp" />
     <ClInclude Include="MemoryManager.hpp" />
+    <ClInclude Include="MyAssert.hpp" />
     <ClInclude Include="Preprocessor.hpp" />
     <ClInclude Include="StrStream.hpp" />
     <ClInclude Include="StdStream.hpp" />

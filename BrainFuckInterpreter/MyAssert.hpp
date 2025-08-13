@@ -1,7 +1,7 @@
 #pragma once
 
-#include <stdio.h>
-#include <stdarg.h>
+#include <cstdio>
+#include <cstdarg>
 
 //inline防止重定义，_Printf_format_string_用于触发编译器参数类型匹配检查
 inline void __MyAssert_Function__(const char *pFileName, size_t szLine, const char *pFunctionName, bool bValid, _Printf_format_string_ const char *pInfo, ...)

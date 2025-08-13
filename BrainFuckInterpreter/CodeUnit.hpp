@@ -220,42 +220,56 @@ public:
 		{
 		case Activity::ACT_u8CalcValue:
 			{
-				printf("%s%u ", BfCodeChar[enSymbol], u8CalcValue);
+				fsPrint.Print("%s%u ", BfCodeChar[enSymbol], u8CalcValue);
 			}
 			break;
 		case Activity::ACT_szMovOffset:
 			{
-				printf("%s%zu ", BfCodeChar[enSymbol], szMovOffset);
+				fsPrint.Print("%s%zu ", BfCodeChar[enSymbol], szMovOffset);
 			}
 			break;
 		case Activity::ACT_szJmpIndex:
 			{
-				printf("%s%zu ", BfCodeChar[enSymbol], szJmpIndex);
+				fsPrint.Print("%s%zu ", BfCodeChar[enSymbol], szJmpIndex);
 			}
 			break;
 		case Activity::ACT_NULL:
 			{
-				printf("%s ", BfCodeChar[enSymbol]);
+				fsPrint.Print("%s ", BfCodeChar[enSymbol]);
 			}
 			break;
 		case Activity::ACT_Unknown:
 		default:
 			{
-				printf("UNNOWN ");
+				fsPrint.Print("UNNOWN ");
 			}
 			break;
 		}
-
 	}
 };
 
 using CodeList = std::vector<CodeUnit>;
 
-static inline void PrintCodeList(const CodeList &listCode)
+//包装为标准io以便默认输出到标准io
+static inline void PrintCodeList(const CodeList &listCode,
+	const char *pHead = "", const char *pTail = "", const char *pPer = "", const char *pSuf = "")
 {
-	FileStream fsStdout(stdout, false);
+	FileStream fsPrint(stdout, false);
+	PrintCodeList(listCode, fsPrint, pHead, pTail, pPer, pSuf);
+}
+
+//此方法可用于强制指定输出文件
+static inline void PrintCodeList(const CodeList &listCode, FileStream &fsPrint,
+	const char *pHead = "", const char *pTail = "", const char *pPer = "", const char *pSuf = "")
+{
+	fsPrint.Print("%s", pHead);
+
 	for (const auto &it : listCode)
 	{
-		it.PrintToStream(fsStdout);
+		fsPrint.Print("%s", pPer);
+		it.PrintToStream(fsPrint);
+		fsPrint.Print("%s", pSuf);
 	}
+
+	fsPrint.Print("%s", pTail);
 }

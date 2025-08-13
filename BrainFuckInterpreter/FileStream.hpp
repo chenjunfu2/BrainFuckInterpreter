@@ -3,6 +3,7 @@
 #include <cstdio>
 #include <cstdlib>
 #include <cstdint>
+#include <cstdarg>
 
 class FileStream
 {
@@ -367,4 +368,15 @@ public:
 	{
 		ReadWithEndian(tArr, N, bDataNeedBigEndian);
 	}
+
+	int Print(_Printf_format_string_ const char *pFormat, ...)
+	{
+		va_list vl;
+		va_start(vl, pFormat);
+		int ret = vfprintf(pFile, pFormat, vl);
+		va_end(vl);
+
+		return ret;
+	}
+
 };
