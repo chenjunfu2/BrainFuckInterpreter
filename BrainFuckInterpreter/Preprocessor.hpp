@@ -324,6 +324,8 @@ private:
 				continue;
 			}
 		}
+		//必须要刚好消耗完
+		MyAssert(codeBlockStack.empty(), "优化失败：括号不匹配！");
 
 		//完成，裁剪代码到szLast + 1的位置（包含szLast下标的元素）（注意，正常情况下哨兵也会走内部处理然后移动，无需再次处理）
 		listCode.resize(szLast + 1);
@@ -659,6 +661,8 @@ private:
 
 			continue;//完成移动，继续for循环
 		}
+		//必须要刚好消耗完
+		MyAssert(codeBlockStack.empty(), "优化失败：括号不匹配！");
 
 		//完成，裁剪代码到szLast + 1的位置（包含szLast下标的元素）（注意，正常情况下哨兵也会走内部处理然后移动，无需再次处理）
 		listCode.resize(szLast + 1);
@@ -705,7 +709,7 @@ private:
 			//先设置当前指向的loopend与栈顶loopbeg的跳转关系
 			listCode[szCurrent].szJmpIndex = codeBlockStack[szStackTop];
 
-
+			//szNewCurrent最后就是所有循环的尾后位置
 			size_t szNewCurrent = szCurrent;
 			while (true)
 			{
@@ -723,17 +727,27 @@ private:
 
 			//计算出重复的个数（不包括当前所以-1）
 			size_t szRepetitions = szNewCurrent - szCurrent - 1;
+			size_t szStackSize = codeBlockStack.size();
+			//size - 1获取top索引然后-szRepetitions获取重复开始时，配对的loopbeg索引
+			size_t szStackOptimizationBeg = szStackSize - 1 - szRepetitions;
 
-			//size 需要 - 1的原因是size本身包含了当前匹配的loopend，而重复的loopend大小应该排除当前loopend
+			//size需要-1的原因是size本身包含了当前匹配的loopend，而重复的loopend大小应该排除当前loopend
 			MyAssert(szRepetitions > codeBlockStack.size() - 1, "优化失败：括号不匹配！");
 
-			
+			//现在szNewCurrent的位置就是所有循环需要的尾后位置
+			for (size_t szIndex = szStackOptimizationBeg; szIndex < szStackSize; ++szIndex)
+			{
+				size_t szCodeListIndex = codeBlockStack[szIndex];
+				listCode[szCodeListIndex].szJmpIndex = szNewCurrent;
+			}
 
+			//弹出直到szStackOptimizationBeg的位置，注意这样会不包含当前szStackOptimizationBeg指向的值
+			codeBlockStack.resize(szStackOptimizationBeg);
 
-
-
-
+			continue;//配对完成，继续循环
 		}
+		//必须要刚好消耗完
+		MyAssert(codeBlockStack.empty(), "优化失败：括号不匹配！");
 
 		return;
 	}
@@ -805,8 +819,6 @@ public:
 			it.PrintToStream(fsStdout);
 		}
 	}
-
-
 	//预处理器报错有待完善
 
 	//预处理器优化有待完善（比如识别经典归0，来回移动，递增递减抵消，无用嵌套抵消等）
