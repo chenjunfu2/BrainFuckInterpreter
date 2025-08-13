@@ -87,8 +87,13 @@ public:
 		exe.SetListCode(std::move(listCode));
 	}
 
-	void run(void)
+	void Run(void)
 	{
 		exe.Loop();
+	}
+
+	void Print(void)
+	{
+		PrintCodeList(exe.GetListCode());
 	}
 };

@@ -810,15 +810,6 @@ public:
 
 		return true;
 	}
-
-	static void PrintCodeList(const CodeList &listCode)
-	{
-		FileStream fsStdout(stdout, false);
-		for (const auto &it : listCode)
-		{
-			it.PrintToStream(fsStdout);
-		}
-	}
 	//预处理器报错有待完善
 
 	//预处理器优化有待完善（比如识别经典归0，来回移动，递增递减抵消，无用嵌套抵消等）

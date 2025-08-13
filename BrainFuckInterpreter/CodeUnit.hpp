@@ -27,14 +27,14 @@ struct CodeUnit//代码单元，执行器用
 	static const inline char *BfCodeChar[] =
 	{
 		"END",
-		">",
-		"<",
 		"+",
 		"-",
-		".",
-		",",
+		">",
+		"<",
 		"[",
 		"]",
+		".",
+		",",
 		"?",
 		"ZRM",
 	};
@@ -250,3 +250,12 @@ public:
 };
 
 using CodeList = std::vector<CodeUnit>;
+
+static inline void PrintCodeList(const CodeList &listCode)
+{
+	FileStream fsStdout(stdout, false);
+	for (const auto &it : listCode)
+	{
+		it.PrintToStream(fsStdout);
+	}
+}

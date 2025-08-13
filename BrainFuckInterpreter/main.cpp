@@ -169,7 +169,8 @@ int main(int argc, const char *argv[])
 	try
 	{
 		Interpreter itp(pInput, sType, bIgnoreUnknownChar);
-		itp.run();
+		//itp.Run();
+		itp.Print();
 	}
 	catch (const std::bad_alloc &e)
 	{
