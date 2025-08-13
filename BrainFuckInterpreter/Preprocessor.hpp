@@ -617,6 +617,7 @@ private:
 			if (szStackTop == codeBlockStack.size() - 1)//完全没有移动
 			{
 				//这个判断必须在前面无效优化之后，这样每个循环都能吃到无效优化尝试，而不是被跳过
+				codeBlockStack.pop_back();//记得弹出当前匹配到的loopbeg，平栈
 				continue;//继续for循环
 			}
 
@@ -732,7 +733,8 @@ private:
 			size_t szStackOptimizationBeg = szStackSize - 1 - szRepetitions;
 
 			//size需要-1的原因是size本身包含了当前匹配的loopend，而重复的loopend大小应该排除当前loopend
-			MyAssert(szRepetitions > codeBlockStack.size() - 1, "优化失败：括号不匹配！");
+			//如果szRepetitions == codeBlockStack.size() - 1则代表刚好匹配
+			MyAssert(szRepetitions <= codeBlockStack.size() - 1, "优化失败：括号不匹配！");
 
 			//现在szNewCurrent的位置就是所有循环需要的尾后位置
 			for (size_t szIndex = szStackOptimizationBeg; szIndex < szStackSize; ++szIndex)
