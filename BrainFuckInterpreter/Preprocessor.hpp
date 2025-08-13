@@ -485,35 +485,84 @@ private:
 			完成连续嵌套无用循环优化
 			
 			同时，如果当前LoopEnd对应的LoopBeg前一个CodeUnit为ZeroMem，则删除整段循环，注意此优化在前面优化完后检测
+			
+			具体操作：
+			判断现在已经配对的循环头前与尾后是否有相邻的循环，是，继续判断直到全部优化
+			然后在移动代码前，检测一下最开头的是不是ZeroMem，如果是，全部丢弃，
+			szLast移动到ZeroMem前一个单元，如果无法移动（已经是0索引），
+			拷贝当前szCurrent+1位置的代码，如果szCurrent+1 >= szCodeSize，
+			直接触发MyAssert，因为至少要有一个末尾卫兵字符ProgEnd存在，此处非预期，程序结束
 			*/
 
 			//获取栈顶索引，开始连续检测
 			//此处至少保证栈顶有1个元素
 			size_t szStackTop = codeBlockStack.size() - 1;
-			//获取当前位置，注意是往后一格的，因为listCode[szLast] = std::move(listCode[szCurrent]);
-			//已经移动的对象不应访问，而szLast已经确认是LoopEnd才会到这里，无需再次使用
-			size_t szNewCurrent = szCurrent + 1;//这里切勿递增szCurrent，除非明确消耗掉下一个CodeUnit，因为for会递增
-
-			//如果这时候栈顶已经是0，没有任何可以消耗的内容了，那么，可以跳过了
-			//或者，如果szNewCurrent已经>= szCodeSize的话，后面也没有可以消耗的内容了，可以跳过了
-			//这也解释了为什么前面不是codeBlockStack.size() - 2而是- 1，因为更前面的MyAssert(!codeBlockStack.empty(), ...);
-			//只能保证有1单元，通过这里的检测后，才能往前继续访问1单元
-			if (szStackTop == 0 || szNewCurrent >= szCodeSize)
+			
+			//下一个循环头（循环内必然初始化，这里赋值一个极值用于避免误操作（直接爆炸~））
+			size_t szLastLoopBeg = (size_t)-1;//因为需要在外部访问实际判断到需要优化的位置，作用域必须覆盖外围，不能在内侧声明
+			//设置下一个预期的循环尾为当前+1，因为最开始已经移动过szCurrent了，并且确认是循环尾，才会执行到此，判断下一个
+			size_t szNextLoopEnd = szCurrent + 1;//需要覆盖外围作用域，因为优化需要知道拷贝范围
+			while (true)
 			{
-				continue;
+				//如果这时候栈顶已经是0，没有任何可以消耗的内容了，那么，可以跳过了
+				//或者，如果szNewCurrent已经>= szCodeSize的话，后面也没有可以消耗的内容了，可以跳过了
+				//这也解释了为什么前面不是codeBlockStack.size() - 2而是- 1，因为更前面的MyAssert(!codeBlockStack.empty(), ...);
+				//只能保证有1单元，通过这里的检测后，才能往前继续访问1单元
+				if (szStackTop == 0 || szNextLoopEnd >= szCodeSize)
+				{
+					break;
+				}
+
+				szLastLoopBeg = codeBlockStack[szStackTop];
+				size_t szPrevLoopBeg = codeBlockStack[szStackTop - 1];
+
+				//检测前循环块是否相邻，后一个CodeUnit是否为LoopEnd
+				//不需要检测后循环块是否相邻，因为是szNextLoopEnd = szLastLoopEnd + 1必然相邻
+				//不需要检测前一个CodeUnit是否为LoopBeg因为codeBlockStack内必为LoopBeg
+				//这个判断相当于在查看是否为配对的相邻循环
+				if (szLastLoopBeg - szPrevLoopBeg != 1 ||
+					listCode[szNextLoopEnd].enSymbol != CodeUnit::Symbol::LoopEnd)//反逻辑，减少嵌套层
+				{
+					break;//结束力
+				}
+
+				//命中，那么代表可以继续连续查找
+				//访问下一个
+				--szStackTop;
+				++szNextLoopEnd;
 			}
 
-			//判断现在已经配对的循环头前与尾后是否有相邻的循环，是，继续判断直到全部优化
-			//然后在移动代码前，检测一下最开头的是不是ZeroMem，如果是，全部丢弃，
-			//szLast移动到ZeroMem前一个单元，如果无法移动（已经是0索引），
-			//拷贝当前szCurrent+1位置的代码，如果szCurrent+1 >= szCodeSize，
-			//直接触发MyAssert，因为至少要有一个末尾卫兵字符ProgEnd存在，此处非预期，程序结束
+			//不论什么情况下，只要执行到这里，说明前面，已经匹配到了一个loopend了，必须弹出一次，保证栈平衡
+			//但是在这之前要保存一下原始值以便直到移动位置
+			size_t szOriginalStackTop = codeBlockStack.size() - 1;
+			codeBlockStack.pop_back();
+
+
+			//不论是否存在优化情况，现在开始判断更前面有没有ZEROMEMORY标志，有的话，这个循环就可以全删了，完全不会执行的，哥们
+			if (szStackTop != 0 &&
+				listCode[codeBlockStack[szStackTop - 1]].enSymbol == CodeUnit::Symbol::ZeroMem)
+			{
+				//执行到此：codeBlockStack[szStackTop - 1]的索引代表的CodeUnit有东西并且是ZeroMem
+				//下面不用移动优化了，全删了，但是不是真的删除，移动一下szLast即可懒惰删除
+
+				szLast = 
+				
+				continue;//继续for循环
+			}
+
+			//执行到此：前面有个P，或者根本不是ZeroMem，尝试优化重复无效循环
+			
 
 
 
+			//到这里说明至少存在上一个不是循环头或下一个不是循环尾，也就是非相邻循环
+			//检查一下是否进行了头尾移动操作，如果确实没有移动，说明没有匹配成功，无需优化
+			if (szStackTop == )//完全没有移动
+			{
+				continue;//继续for循环
+			}
 
-
-
+			
 
 
 
