@@ -776,10 +776,11 @@ private:
 			bool b1 = OperatorMergeOptimization(listCode);//接着进行操作去重优化
 			PrintCodeList(listCode, "OperatorMergeOptimization:", "\n");
 			bool b2 = InvalidLoopOptimization(listCode);//然后优化掉无效循环
-			PrintCodeList(listCode, "OperatorMergeOptimization:", "\n");
+			PrintCodeList(listCode, "InvalidLoopOptimization:", "\n");
 
 			if (b0 || b1 || b2)//只要有任意一个成功，那么继续
 			{
+				printf("continue\n");
 				continue;
 			}
 
