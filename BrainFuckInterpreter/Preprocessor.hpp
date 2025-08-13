@@ -510,18 +510,15 @@ private:
 				//所以此Assert必须要成功，否则程序退出
 				MyAssert(szNextLoopEnd < szCodeSize, "优化失败：丢失结束标记！");//不是吧哥们，我的ProgEnd去哪里了？
 				
+				//这里要在判断之前赋值，循环外始终假设szLastLoopBeg是codeBlockStack[szStackTop]
+				szLastLoopBeg = codeBlockStack[szStackTop];
 
-				//如果这时候栈顶已经是0，没有任何可以消耗的内容了，那么，可以跳过了
-				//或者，如果szNewCurrent >= szCodeSize的话，后面也没有可以消耗的内容了，可以跳过了
-				//这也解释了为什么前面szStackTop不是codeBlockStack.size() - 2而是- 1，
-				//因为更前面的MyAssert(!codeBlockStack.empty(), ...);
-				//只能保证有1单元，通过这里的检测后，才能往前继续访问1单元
+				//如果这时候栈顶索引已经是0，代表前面没有任何可以消耗的内容了，那么，可以跳过了
 				if (szStackTop == 0)
 				{
 					break;
 				}
-
-				szLastLoopBeg = codeBlockStack[szStackTop];
+				
 				size_t szPrevLoopBeg = codeBlockStack[szStackTop - 1];
 
 				//检测前循环块是否相邻，后一个CodeUnit是否为LoopEnd
@@ -546,6 +543,33 @@ private:
 
 			if (szStackTop == 0 && codeBlockStack[szStackTop] == 0)
 			{//循环开头在最开始，默认内存单元初始值为0，循环也相当于从ZeroMem开始，完全被跳过
+				//现在listCode可能如下所示（*表示不关心是什么，x表示无效区域，
+				//szCurrent指向的其实也是被move的无效区域，原先的值为szLast指向的位置）
+			//    0  1  2  3  4  5  6  7  8  9  A  B  C  D  E  F  G  H  ...
+			//    [  [  [  >  +  <  -  ]  x  x  x  x  ]  *  ]  *  *  *  ...
+			//    ^                    ^           ^  ^   
+			//    |                    |           |  |
+			//szLastLoopBeg          szLast    szCurrent
+			//codeBlockStack.back()                   |
+			//                                  szNextLoopEnd
+
+			//移动后的效果应该如下所示，注意这里@表示根本不会访问，虚拟位置
+			//-1  0  1  2  3  4  5  6  7  8  9  A  B  C  D  E  F  G  H  ...
+			// @  x  x  x  x  x  x  x  x  x  x  x  x  x  *  *  ]  ...
+			// ^  ^                                   ^  ^
+			// |  |                                   |  |
+			//szLastLoopBeg                       szCurrent
+			//szLast                                     |
+			//                                     szNextLoopEnd
+
+
+
+
+
+
+
+
+
 
 				szLast = -1;//下一次循环的时候++会让它变为0
 				
@@ -580,20 +604,35 @@ private:
 				continue;//继续for循环
 			}
 
-			//执行到此：前面有个p的东西，或者根本不是ZeroMem，尝试去掉重复无效循环
-
 			//到这里说明至少存在上一个不是循环头或下一个不是循环尾，也就是非相邻循环
+			//并且也不符合无效循环优化条件
 			//检查一下是否进行了头尾移动操作，如果确实没有移动，说明没有匹配成功，无需优化
 			if (szStackTop == codeBlockStack.size() - 1)//完全没有移动
 			{
+				//这个判断必须在前面无效优化之后，这样每个循环都能吃到无效优化尝试，而不是被跳过
 				continue;//继续for循环
 			}
 
 			
+			//很好，可以移动了
+			//现在listCode可能如下所示（*表示不关心是什么，x表示无效区域，
+			//szCurrent指向的其实也是被move的无效区域，原先的值为szLast指向的位置）
+		//    0  1  2  3  4  5  6  7  8  9  A  B  C  D  E  F  G  H  ...
+		//    *  [  [  [  [  >  +  <  -  ]  x  x  x  ]  ]  *  *  ]  ...
+		//          ^     ^              ^        ^        ^   
+		//          |     |              |        |        |
+		//    szLastLoopBeg            szLast     |        |
+		//                |                   szCurrent    |
+		//      codeBlockStack.back()                szNextLoopEnd
 
-
-
-
+			//移动后的效果应该如下所示
+		//    0  1  2  3  4  5  6  7  8  9  A  B  C  D  E  F  G  H  ...
+		//    *  [  [  >  +  <  -  ]  x  x  x  x  x  x  x  *  *  ]  ...
+		//    	 ^  ^              ^                    ^  ^
+		//       |  |              |                    |  |
+		//    szLastLoopBeg      szLast             szCurrent
+		//       |                                         |
+		//codeBlockStack.back()                      szNextLoopEnd
 
 		}
 
