@@ -4,7 +4,7 @@
 #include <new>
 
 #define PROJECT "BrainFuckInterpreter"
-#define VERSION "1.0.3"
+#define VERSION "1.0.4"
 
 #define COPYRIGHT "Copyright(C)"
 #define YEAR "2025"
