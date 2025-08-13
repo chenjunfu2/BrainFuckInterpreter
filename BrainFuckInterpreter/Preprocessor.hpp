@@ -680,7 +680,62 @@ private:
 			return;
 		}
 
+		//块语句栈（存储索引）
+		std::vector<size_t> codeBlockStack;
 
+		//无需缩减listCode，仅改变循环数据
+		for (size_t szCurrent = 0, szCodeSize = listCode.size(); szCurrent < szCodeSize; ++szCurrent)
+		{
+			if (listCode[szCurrent].enSymbol == CodeUnit::Symbol::LoopBeg)
+			{
+				codeBlockStack.push_back(szCurrent);
+				continue;
+			}
+
+			if (listCode[szCurrent].enSymbol != CodeUnit::Symbol::LoopEnd)
+			{
+				continue;
+			}
+
+			MyAssert(!codeBlockStack.empty(), "优化失败：块语句栈意外为空！");
+
+			//现在遇到一个与之匹配的LoopEnd，继续往后查找连续的LoopEnd直到任意一个非LoopEnd，
+			//设置所有前面配对的LoopBeg到那个非LoopEnd的位置，完成优化
+			size_t szStackTop = codeBlockStack.size() - 1;//获取栈顶，栈顶与当前匹配
+			//先设置当前指向的loopend与栈顶loopbeg的跳转关系
+			listCode[szCurrent].szJmpIndex = codeBlockStack[szStackTop];
+
+
+			size_t szNewCurrent = szCurrent;
+			while (true)
+			{
+				//实际上，不可能szNewCurrent + 1 >= szCodeSize，
+				//因为至少上一个是LoopEnd，那么必然遇到卫兵字符，
+				//不能在这之前遇到结尾，需要Assert保证
+				MyAssert(szNewCurrent + 1 < szCodeSize, "优化失败：丢失结束标记！");
+
+				//如果当前无重复，退出
+				if(listCode[++szNewCurrent].enSymbol != CodeUnit::Symbol::LoopEnd)
+				{
+					break;
+				}
+			}
+
+			//计算出重复的个数（不包括当前所以-1）
+			size_t szRepetitions = szNewCurrent - szCurrent - 1;
+
+			//size 需要 - 1的原因是size本身包含了当前匹配的loopend，而重复的loopend大小应该排除当前loopend
+			MyAssert(szRepetitions > codeBlockStack.size() - 1, "优化失败：括号不匹配！");
+
+			
+
+
+
+
+
+		}
+
+		return;
 	}
 
 
