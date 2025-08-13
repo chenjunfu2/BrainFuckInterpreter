@@ -22,7 +22,7 @@ public:
 		Std,
 	};
 
-	Interpreter(const char *pStr, StreamType enStreamType, bool bIgnoreUnknownChar)
+	Interpreter(const char *pStr, StreamType enStreamType, bool bIgnoreUnknownChar, bool bOptimization)
 	{
 		CodeList listCode{};
 
@@ -37,7 +37,7 @@ public:
 					exit(-1);
 				}
 
-				if (!Preprocessor<FileStream>::PreprocessInStream(sFile, listCode, bIgnoreUnknownChar))
+				if (!Preprocessor<FileStream>::PreprocessInStream(sFile, listCode, bIgnoreUnknownChar, bOptimization))
 				{
 					printf("预处理错误：翻译失败\n");
 					exit(-1);
@@ -53,7 +53,7 @@ public:
 				}
 
 				StrStream csInput(pStr, strlen(pStr));//不用判断csInput有效性，此处默认一定成功
-				if (!Preprocessor<StrStream>::PreprocessInStream(csInput, listCode, bIgnoreUnknownChar))
+				if (!Preprocessor<StrStream>::PreprocessInStream(csInput, listCode, bIgnoreUnknownChar, bOptimization))
 				{
 					printf("预处理错误：翻译失败\n");
 					exit(-1);
@@ -63,7 +63,7 @@ public:
 		case Std:
 			{
 				StdStream csInput{};
-				if (!Preprocessor<StdStream>::PreprocessInStream(csInput, listCode, bIgnoreUnknownChar))
+				if (!Preprocessor<StdStream>::PreprocessInStream(csInput, listCode, bIgnoreUnknownChar, bOptimization))
 				{
 					printf("预处理错误：翻译失败\n");
 					exit(-1);

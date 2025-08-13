@@ -168,7 +168,7 @@ int main(int argc, const char *argv[])
 
 	try
 	{
-		Interpreter itp(pInput, sType, bIgnoreUnknownChar);
+		Interpreter itp(pInput, sType, bIgnoreUnknownChar, true);
 		//itp.Run();
 		itp.Print();
 	}

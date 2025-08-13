@@ -220,7 +220,7 @@ private:
 	//判断是否拥有足够多的打码来进行优化，至少2个。为什么要+1？因为有结尾哨兵标记ProgEnd占用1空间
 	static bool ContainsEnoughCode(CodeList &listCode)
 	{
-		return listCode.size() < 2 + 1;
+		return listCode.size() >= 2 + 1;
 	}
 	static bool IsOperator(CodeUnit::Symbol enSym)//判断是否是数值运算类型
 	{
@@ -785,7 +785,7 @@ private:
 public:
 
 	//如果该函数返回false，那么任何使用listCode进行执行的操作都是未定义行为，当然，读取失败现场是没问题的
-	static bool PreprocessInStream(StreamType &sStream, CodeList &listCode, bool bIgnoreUnknownChar, bool bOptimization = true)
+	static bool PreprocessInStream(StreamType &sStream, CodeList &listCode, bool bIgnoreUnknownChar, bool bOptimization)
 	{
 		//先进性无优化预处理（调试分析用）
 		if (!NoOptimizationPreprocess(sStream, listCode, bIgnoreUnknownChar))
