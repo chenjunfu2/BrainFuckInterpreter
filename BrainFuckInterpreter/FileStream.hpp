@@ -283,7 +283,7 @@ public:
 		if constexpr (sizeof(T) == sizeof(uint8_t))
 		{
 			//直接写入数据
-			if (Write != sizeof(T))
+			if (Write(tData) != sizeof(T))
 			{
 				return false;
 			}

@@ -42,7 +42,7 @@ struct CodeUnit//代码单元，执行器用
 	//做完虚拟码编译后此处只能新增不能修改顺序
 	enum Symbol : uint8_t
 	{
-		Unknown = -1,//未知（正常无用）
+		Unknown = (uint8_t)-1,//未知（正常无用）
 		ProgEnd = 0,//特殊标记，程序结束
 		AddCur,		//+
 		SubCur,		//-
@@ -67,7 +67,7 @@ struct CodeUnit//代码单元，执行器用
 public:
 	enum Activity : uint8_t
 	{
-		ACT_Unknown = -1,
+		ACT_Unknown = (uint8_t)-1,
 		ACT_NULL = 0,
 		ACT_u8CalcValue,
 		ACT_szMovOffset,
