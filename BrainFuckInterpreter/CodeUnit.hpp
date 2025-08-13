@@ -250,14 +250,6 @@ public:
 
 using CodeList = std::vector<CodeUnit>;
 
-//包装为标准io以便默认输出到标准io
-static inline void PrintCodeList(const CodeList &listCode,
-	const char *pHead = "", const char *pTail = "", const char *pPer = "", const char *pSuf = " ")
-{
-	FileStream fsPrint(stdout, false);
-	PrintCodeList(listCode, fsPrint, pHead, pTail, pPer, pSuf);
-}
-
 //此方法可用于强制指定输出文件
 static inline void PrintCodeList(const CodeList &listCode, FileStream &fsPrint,
 	const char *pHead = "", const char *pTail = "", const char *pPer = "", const char *pSuf = " ")
@@ -270,4 +262,12 @@ static inline void PrintCodeList(const CodeList &listCode, FileStream &fsPrint,
 	}
 
 	fsPrint.Print("%s", pTail);
+}
+
+//包装为标准io以便默认输出到标准io
+static inline void PrintCodeList(const CodeList &listCode,
+	const char *pHead = "", const char *pTail = "", const char *pPer = "", const char *pSuf = " ")
+{
+	FileStream fsPrint(stdout, false);
+	PrintCodeList(listCode, fsPrint, pHead, pTail, pPer, pSuf);
 }
