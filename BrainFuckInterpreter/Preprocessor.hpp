@@ -541,64 +541,48 @@ private:
 			//不论是否存在优化情况，现在开始判断更前面有没有ZEROMEMORY标志，
 			//有的话，这个连续或单个循环就可以全删了，完全不会执行的，哥们
 
-			if (szStackTop == 0 && codeBlockStack[szStackTop] == 0)
-			{//循环开头在最开始，默认内存单元初始值为0，循环也相当于从ZeroMem开始，完全被跳过
+			//命中if后，全删了，但是不是真的删除，移动一下szLast到ZeroMem的位置，并且同时移动szCurrent即可懒惰删除
+			if ((szStackTop == 0 && szLastLoopBeg == 0)||//循环开头在最开始，默认内存单元初始值为0，循环也相当于从ZeroMem开始，完全被跳过
+				szLastLoopBeg != 0 && listCode[szLastLoopBeg - 1].enSymbol == CodeUnit::Symbol::ZeroMem)//判断szLastLoopBeg - 1也就是第一个szLastLoopBeg - szPrevLoopBeg != 1情况下的szLastLoopBeg前面是否有东西
+			{
 				//现在listCode可能如下所示（*表示不关心是什么，x表示无效区域，
 				//szCurrent指向的其实也是被move的无效区域，原先的值为szLast指向的位置）
 			//    0  1  2  3  4  5  6  7  8  9  A  B  C  D  E  F  G  H  ...
-			//    [  [  [  >  +  <  -  ]  x  x  x  x  ]  *  ]  *  *  *  ...
-			//    ^                    ^           ^  ^   
-			//    |                    |           |  |
-			//szLastLoopBeg          szLast    szCurrent
-			//codeBlockStack.back()                   |
-			//                                  szNextLoopEnd
+			//    [  [  [  >  +  <  -  ]  x  x  x  x  ]  ]  *  *  *  *  ...
+			//    ^                    ^           ^        ^   
+			//    |                    |           |        |
+			//szLastLoopBeg          szLast    szCurrent    |
+			//codeBlockStack.back()                   szNextLoopEnd
+			//                                        
 
 			//移动后的效果应该如下所示，注意这里@表示根本不会访问，虚拟位置
-			//-1  0  1  2  3  4  5  6  7  8  9  A  B  C  D  E  F  G  H  ...
-			// @  x  x  x  x  x  x  x  x  x  x  x  x  x  *  *  ]  ...
-			// ^  ^                                   ^  ^
-			// |  |                                   |  |
-			//szLastLoopBeg                       szCurrent
-			//szLast                                     |
-			//                                     szNextLoopEnd
-
-
-
-
-
-
-
-
-
-
-				szLast = -1;//下一次循环的时候++会让它变为0
-				
-				//移动szCurrent到szNextLoopEnd - 1，也就是第一个匹配循环尾失败的位置前面，
-				//注意这个if是szStackTop == 0退出后进入的，而szNextLoopEnd在++之前确实是LoopEnd，
-				//所以-1就是第一个匹配循环尾失败的位置前面
-				szCurrent = szNextLoopEnd - 1;
-
-				//这样操作之后，下一次循环必然有++szCurrent == szNextLoopEnd上的元素，
-				//拷贝到listCode[++szLast]（szLast == 0）上
-
-				//平栈
-				codeBlockStack.clear();//全删了，直到循环开头
-
-				continue;//继续循环
-			}
-			//判断szLastLoopBeg - 1也就是第一个szLastLoopBeg - szPrevLoopBeg != 1情况下的szLastLoopBeg前面是否有东西
-			else if (szLastLoopBeg != 0 && listCode[szLastLoopBeg - 1].enSymbol == CodeUnit::Symbol::ZeroMem)
-			{
-				//下面不用移动优化了，全删了，但是不是真的删除，移动一下szLast到ZeroMem的位置，并且同时移动szCurrent即可懒惰删除
+			//当然也有可能是另一种情况，比如szLastLoopBeg前面不是-1且为ZeroMem
+			//    -1  0  1  2  3  4  5  6  7  8  9  A  B  C  D  E  F  G  H  ...
+			//     @  x  x  x  x  x  x  x  x  x  x  x  x  x  *  *  *  ...
+			//     ^  ^                                   ^  ^
+			//     |  |                                   |  |
+			//  szLastLoopBeg                         szCurrent
+			//     |                                         |
+			//   szLast                                szNextLoopEnd
+			//
+			//codeBlockStack.empty() == true 或 codeBlockStack.back() 在 szLastLoopBeg 前面一个[的位置
 
 				//szLastLoopBeg - 1的位置刚好是ZeroMem的位置，保证continue之后移动到下一个正常处理
+				//如果szStackTop，其实就是szLast = -1下一次循环的时候++会让它变为0，也能正常
 				szLast = szLastLoopBeg - 1;
-				//szNextLoopEnd - 1刚好是上一个被使用的下标
+				
+				//移动szCurrent到szNextLoopEnd - 1，也就是第一个匹配循环尾失败的位置前面，
+				//注意如果这个if是szStackTop == 0退出后进入的，而szNextLoopEnd在++之前确实是LoopEnd，
+				//所以szNextLoopEnd - 1就是第一个匹配循环尾失败的位置前面
 				//保证continue之后移动到下一个正常处理
 				szCurrent = szNextLoopEnd - 1;
 
+				//这样操作之后，下一次循环必然有++szCurrent == szNextLoopEnd上的元素，
+				//拷贝到listCode[++szLast]上
+
 				//平衡栈直到szStackTop//为什么不需要-1？因为只需要删除到szStackTop为止，size是比索引大1的，
 				//删除到索引（也就是当前索引当成size）的情况下，当前索引上的元素也被删除，如果-1会多删除1个
+				//并且如果szStackTop == 0，刚好相当于全删了，直到循环开头
 				codeBlockStack.resize(szStackTop);
 
 				continue;//继续for循环
