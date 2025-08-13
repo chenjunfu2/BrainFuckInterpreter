@@ -327,8 +327,9 @@ private:
 		//必须要刚好消耗完
 		MyAssert(codeBlockStack.empty(), "优化失败：括号不匹配！");
 
-		//完成，裁剪代码到szLast + 1的位置（包含szLast下标的元素）（注意，正常情况下哨兵也会走内部处理然后移动，无需再次处理）
-		listCode.resize(szLast + 1);
+		//完成，裁剪代码到szLast的位置（不包含szLast下标的元素，因为for最后会超前递增一次，这样能包含递增之前的szLast）
+		//（注意，正常情况下哨兵也会走内部处理然后移动，无需再次处理）
+		listCode.resize(szLast);
 
 		return bIsOptimization;
 	}
@@ -446,7 +447,8 @@ private:
 			}
 		}
 
-		//完成，裁剪代码到szLast + 1的位置（包含szLast下标的元素）（注意，正常情况下哨兵也会走内部处理然后移动，无需再次处理）
+		//完成，裁剪代码到szLast + 1的位置（包含szLast下标的元素，这里不是由for递增的，需要手动+1以便保留szLast的元素）
+		//（注意，正常情况下哨兵也会走内部处理然后移动，无需再次处理）
 		listCode.resize(szLast + 1);
 
 		return bIsOptimization;
@@ -665,8 +667,9 @@ private:
 		//必须要刚好消耗完
 		MyAssert(codeBlockStack.empty(), "优化失败：括号不匹配！");
 
-		//完成，裁剪代码到szLast + 1的位置（包含szLast下标的元素）（注意，正常情况下哨兵也会走内部处理然后移动，无需再次处理）
-		listCode.resize(szLast + 1);
+		//完成，裁剪代码到szLast的位置（不包含szLast下标的元素，因为for最后会超前递增一次，这样能包含递增之前的szLast）
+		//（注意，正常情况下哨兵也会走内部处理然后移动，无需再次处理）
+		listCode.resize(szLast);
 
 		return bIsOptimization;
 	}
@@ -806,7 +809,7 @@ public:
 		//这里使用for短路求值，如果已经为空则不会访问back导致out of range炸掉
 		if (listCode.empty() || listCode.back().enSymbol != CodeUnit::Symbol::ProgEnd)
 		{
-			printf("预处理错误：代码意外为空或丢失结束标记！");
+			printf("预处理错误：代码意外为空或丢失结束标记！\n");
 			return false;
 		}
 
