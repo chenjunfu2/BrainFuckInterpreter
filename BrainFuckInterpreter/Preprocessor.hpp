@@ -250,15 +250,17 @@ private:
 	但是也要匹配[Z]，防止[[-]]之类的嵌套情况，要跑多次优化
 	然后在此基础上调用OperatorMergeOptimization去掉重复的ZZZZ以及优化后可以合并的新的点
 	*/
-	static void CountdownZeroOptimization(CodeList &listCode)
+	static bool CountdownZeroOptimization(CodeList &listCode)
 	{
 		if (!ContainsEnoughCode(listCode))//元素不足，无需优化，直接退出
 		{
-			return;
+			return false;
 		}
 
 		//块语句栈（存储索引）
 		std::vector<size_t> codeBlockStack;
+
+		bool bIsOptimization = false;
 
 		size_t szLast = 0;//依然是快慢指针操作
 		for (size_t szCurrent = 0, szCodeSize = listCode.size(); szCurrent < szCodeSize; ++szCurrent, ++szLast)
@@ -296,6 +298,8 @@ private:
 				listCode[szLast - 1].u8CalcValue == 1)//必须保证u8CalcValue是1，否则可能导致[++]之类的操作不符合预期
 			{
 				//非常棒，这就是需要优化的部分
+				bIsOptimization = true;//标记一下成功进行了至少一次优化
+
 				size_t szNewLast = codeBlockStack.back();
 				codeBlockStack.pop_back();
 				//内存布局举例如下：
@@ -320,6 +324,11 @@ private:
 				continue;
 			}
 		}
+
+		//完成，裁剪代码到szLast + 1的位置（包含szLast下标的元素）（注意，正常情况下哨兵也会走内部处理然后移动，无需再次处理）
+		listCode.resize(szLast + 1);
+
+		return bIsOptimization;
 	}
 
 	static bool CanMergeOperator(CodeUnit::Symbol enTargetiSym, CodeUnit::Symbol enSourceSym)
@@ -372,12 +381,14 @@ private:
 	快慢索引之间的区域就是被优化掉的区域，慢索引会慢慢往后覆盖，
 	直到快索引遇到代码单元列表的结尾，裁切直到慢索引的位置，优化结束
 	*/
-	static void OperatorMergeOptimization(CodeList &listCode)//返回是否进行了至少1次优化
+	static bool OperatorMergeOptimization(CodeList &listCode)//返回是否进行了至少1次优化
 	{
 		if (!ContainsEnoughCode(listCode))//元素不足，无需优化，直接退出
 		{
-			return;
+			return false;
 		}
+
+		bool bIsOptimization = false;
 
 		//到此必然有至少2元素
 		size_t szLast = 0;
@@ -389,6 +400,7 @@ private:
 			
 			if (CanMergeOperator(cuLast.enSymbol, cuCurrent.enSymbol))//合并运算符
 			{
+				bIsOptimization = true;//标记一下
 				if (MergeOperator(cuLast.enSymbol, cuLast.u8CalcValue, cuCurrent.enSymbol, cuCurrent.u8CalcValue))
 				{
 					continue;//正常合并
@@ -397,6 +409,7 @@ private:
 			}
 			else if (CanMergePointerMove(cuLast.enSymbol, cuCurrent.enSymbol))//合并指针移动
 			{
+				bIsOptimization = true;//标记一下
 				if (MergeOperator(cuLast.enSymbol, cuLast.szMovOffset, cuCurrent.enSymbol, cuCurrent.szMovOffset))
 				{
 					continue;//正常合并
@@ -405,6 +418,7 @@ private:
 			}
 			else if (HasDuplicates(cuLast.enSymbol, cuCurrent.enSymbol))//去重操作
 			{
+				bIsOptimization = true;//标记一下
 				continue;//直接继续直到任意一个不匹配
 			}
 			else//无法合并
@@ -430,8 +444,10 @@ private:
 			}
 		}
 
-		//完成，裁剪代码到szLast + 1的位置（注意，正常情况下哨兵也会走内部处理然后移动，无需再次处理）
+		//完成，裁剪代码到szLast + 1的位置（包含szLast下标的元素）（注意，正常情况下哨兵也会走内部处理然后移动，无需再次处理）
 		listCode.resize(szLast + 1);
+
+		return bIsOptimization;
 	}
 
 
@@ -446,15 +462,17 @@ private:
 
 	本函数难度较大，需要多种模式匹配
 	*/
-	static void InvalidLoopOptimization(CodeList &listCode)
+	static bool InvalidLoopOptimization(CodeList &listCode)
 	{
 		if (!ContainsEnoughCode(listCode))//元素不足，无需优化，直接退出
 		{
-			return;
+			return false;
 		}
 
 		//块语句栈（存储索引）
 		std::vector<size_t> codeBlockStack;
+
+		 bool bIsOptimization = false;
 
 		size_t szLast = 0;//依然是快慢指针操作
 		for (size_t szCurrent = 0, szCodeSize = listCode.size(); szCurrent < szCodeSize; ++szCurrent, ++szLast)
@@ -545,6 +563,9 @@ private:
 			if ((szStackTop == 0 && szLastLoopBeg == 0)||//循环开头在最开始，默认内存单元初始值为0，循环也相当于从ZeroMem开始，完全被跳过
 				szLastLoopBeg != 0 && listCode[szLastLoopBeg - 1].enSymbol == CodeUnit::Symbol::ZeroMem)//判断szLastLoopBeg - 1也就是第一个szLastLoopBeg - szPrevLoopBeg != 1情况下的szLastLoopBeg前面是否有东西
 			{
+				//很好，可以优化
+				bIsOptimization = true;//标记一下
+
 				//现在listCode可能如下所示（*表示不关心是什么，x表示无效区域，
 				//szCurrent指向的其实也是被move的无效区域，原先的值为szLast指向的位置）
 			//    0  1  2  3  4  5  6  7  8  9  A  B  C  D  E  F  G  H  ...
@@ -597,6 +618,8 @@ private:
 				continue;//继续for循环
 			}
 
+			//下面必然是优化代码
+			bIsOptimization = true;//标记一下
 			
 			//很好，可以移动了
 			//现在listCode可能如下所示（*表示不关心是什么，x表示无效区域，
@@ -618,18 +641,36 @@ private:
 		//       |                                         |
 		//codeBlockStack.back()                      szNextLoopEnd
 
+			size_t szNearLoopBeg = codeBlockStack.back();
+			for (size_t szSource = szNearLoopBeg,
+						szSourceEnd = szLast + 1,
+						szTarget = szLastLoopBeg;
+				szSource < szSourceEnd; ++szSource, ++szTarget)
+			{
+				listCode[szTarget] = std::move(listCode[szSource]);//移动区域内的代码
+			}
+
+			//设置当前位置与上一位置
+			szCurrent = szNextLoopEnd - 1;
+			szLast -= szNearLoopBeg;
+
+			//设置栈，大小为szStackTop相当于让codeBlockStack.back()在szLastLoopBeg的前面一个[位置
+			codeBlockStack.resize(szStackTop);
+
+			continue;//完成移动，继续for循环
 		}
 
+		//完成，裁剪代码到szLast + 1的位置（包含szLast下标的元素）（注意，正常情况下哨兵也会走内部处理然后移动，无需再次处理）
+		listCode.resize(szLast + 1);
 
-
-
-
+		return bIsOptimization;
 	}
 
 
 	/*
 	循环跳转设置与优化：
 	前置优化完成后，设置所有循环的跳转点，同时优化同尾循环开头跳转点为最后一个外循环的尾部
+	注意此函数无需返回是否进行了优化，直接返回
 	*/
 
 	static void LoopSettingAndOptimization(CodeList &listCode)
@@ -650,12 +691,25 @@ private:
 		//然后按顺序运行，直到某一遍所有的函数
 		//都返回false，代表没有更多可以优化的了
 
-		CountdownZeroOptimization(listCode);//先优化掉可以匹配的固定模式
-		
-		OperatorMergeOptimization(listCode);//接着进行操作去重优化
-		InvalidLoopOptimization(listCode);//然后优化掉无效循环
+		//因为至少要进行一次优化且必须要保证优化按顺序调用直到全部false
+		//所以避免短路求值问题，使用bool值保存
+		while (true)
+		{
+			bool b0 = CountdownZeroOptimization(listCode);//先优化掉可以匹配的固定模式
+			bool b1 = OperatorMergeOptimization(listCode);//接着进行操作去重优化
+			bool b2 = InvalidLoopOptimization(listCode);//然后优化掉无效循环
 
-		LoopSettingAndOptimization(listCode);//最后进行循环优化，同时设置循环跳转关系
+			if (b0 || b1 || b2)//只要有任意一个成功，那么继续
+			{
+				continue;
+			}
+
+			//否则直接跳出
+			break;
+		}
+
+		LoopSettingAndOptimization(listCode);//最后进行循环跳转位置匹配与连续尾部跳转优化
+		return;
 	}
 
 
