@@ -320,43 +320,6 @@ private:
 		}
 	}
 
-	/*
-	无效循环优化：判断到置0后的循环，删除它，这是没用的
-	无意义的嵌套循环删除：[[[[[++>++<<--]]]]]
-	删除后继续判断，可以删除连续的无用循环
-
-	本函数难度较大，需要多种模式匹配
-	*/
-	static void InvalidLoopOptimization(CodeList &listCode)
-	{
-		if (!ContainsEnoughCode(listCode))//元素不足，无需优化，直接退出
-		{
-			return;
-		}
-
-		size_t szLast = 0;//依然是快慢指针操作
-		for (size_t szCurrent = 0, szCodeSize = listCode.size(); szCurrent < szCodeSize; ++szCurrent, ++szLast)
-		{
-			if (szLast != szCurrent)
-			{
-				listCode[szLast] = std::move(listCode[szCurrent]);
-			}
-
-
-
-
-
-
-		}
-
-
-
-
-
-	}
-
-	
-
 	static bool CanMergeOperator(CodeUnit::Symbol enTargetiSym, CodeUnit::Symbol enSourceSym)
 	{
 		return	IsOperator(enTargetiSym) && IsOperator(enSourceSym);//都是运算符
@@ -471,13 +434,48 @@ private:
 
 
 
+	/*
+	无效循环优化：判断到置0后的循环，删除它，这是没用的
+	无意义的嵌套循环删除：[[[[[++>++<<--]]]]]
+	删除后继续判断，可以删除连续的无用循环
+
+	本函数难度较大，需要多种模式匹配
+	*/
+	static void InvalidLoopOptimization(CodeList &listCode)
+	{
+		if (!ContainsEnoughCode(listCode))//元素不足，无需优化，直接退出
+		{
+			return;
+		}
+
+		size_t szLast = 0;//依然是快慢指针操作
+		for (size_t szCurrent = 0, szCodeSize = listCode.size(); szCurrent < szCodeSize; ++szCurrent, ++szLast)
+		{
+			if (szLast != szCurrent)
+			{
+				listCode[szLast] = std::move(listCode[szCurrent]);
+			}
+
+
+
+
+
+
+		}
+
+
+
+
+
+	}
+
 
 	/*
-	同尾循环优化：
+	循环跳转设置与优化：
 	前置优化完成后，设置所有循环的跳转点，同时优化同尾循环开头跳转点为最后一个外循环的尾部
 	*/
 
-	static void SameTailLoopOptimization(CodeList &listCode)
+	static void LoopSettingAndOptimization(CodeList &listCode)
 	{
 		if (!ContainsEnoughCode(listCode))//元素不足，无需优化，直接退出
 		{
@@ -496,9 +494,11 @@ private:
 		//都返回false，代表没有更多可以优化的了
 
 		CountdownZeroOptimization(listCode);//先优化掉可以匹配的固定模式
-		InvalidLoopOptimization(listCode);//然后优化掉无效循环（置0后立刻循环）
+		
 		OperatorMergeOptimization(listCode);//接着进行操作去重优化
-		SameTailLoopOptimization(listCode);//最后进行循环优化，同时设置循环跳转关系
+		InvalidLoopOptimization(listCode);//然后优化掉无效循环
+
+		LoopSettingAndOptimization(listCode);//最后进行循环优化，同时设置循环跳转关系
 	}
 
 
@@ -569,18 +569,3 @@ public:
 
 
 };
-
-
-/*
-改为多次解析：
-- 第零次预处理：无优化方便报错
-- 第一次预处理：循环调用第一次优化
-- 第二次预处理：调用第二次优化后循环调用1~2直到全部完成
-
-
-- 第一次优化：合并连续的所有运算操作或所有指针操作，
-	比如+++变为+3，同时+3 -1变成+2，>>>变成>3，同时>3 <3直接抵消
-- 第二次优化：处理连续循环结尾，去掉所有诸如[-]、[+]的归零操作，变为直接操作
-	此操作后可能导致新的合并，需要重复第一次优化和本次优化
-
-*/
