@@ -213,29 +213,29 @@ public:
 
 	}
 
-	void PrintToStream(FileStream &fsPrint) const//FileStream可以打开标准流或文件，方便输出
+	void PrintToStream(FileStream &fsPrint, const char *pPer = "", const char *pSuf = " ") const//FileStream可以打开标准流或文件，方便输出
 	{
 		Activity actMemb = GetActivityMember();
 		switch (actMemb)
 		{
 		case Activity::ACT_u8CalcValue:
 			{
-				fsPrint.Print("%s%u ", BfCodeChar[enSymbol], u8CalcValue);
+				fsPrint.Print("%s%s%u%s", pPer, BfCodeChar[enSymbol], u8CalcValue, pSuf);
 			}
 			break;
 		case Activity::ACT_szMovOffset:
 			{
-				fsPrint.Print("%s%zu ", BfCodeChar[enSymbol], szMovOffset);
+				fsPrint.Print("%s%s%zu%s", pPer, BfCodeChar[enSymbol], szMovOffset, pSuf);
 			}
 			break;
 		case Activity::ACT_szJmpIndex:
 			{
-				fsPrint.Print("%s%zu ", BfCodeChar[enSymbol], szJmpIndex);
+				fsPrint.Print("%s%s%zu%s", pPer, BfCodeChar[enSymbol], szJmpIndex, pSuf);
 			}
 			break;
 		case Activity::ACT_NULL:
 			{
-				fsPrint.Print("%s ", BfCodeChar[enSymbol]);
+				fsPrint.Print("%s%s%s", pPer, BfCodeChar[enSymbol], pSuf);
 			}
 			break;
 		case Activity::ACT_Unknown:
@@ -252,7 +252,7 @@ using CodeList = std::vector<CodeUnit>;
 
 //包装为标准io以便默认输出到标准io
 static inline void PrintCodeList(const CodeList &listCode,
-	const char *pHead = "", const char *pTail = "", const char *pPer = "", const char *pSuf = "")
+	const char *pHead = "", const char *pTail = "", const char *pPer = "", const char *pSuf = " ")
 {
 	FileStream fsPrint(stdout, false);
 	PrintCodeList(listCode, fsPrint, pHead, pTail, pPer, pSuf);
@@ -260,15 +260,13 @@ static inline void PrintCodeList(const CodeList &listCode,
 
 //此方法可用于强制指定输出文件
 static inline void PrintCodeList(const CodeList &listCode, FileStream &fsPrint,
-	const char *pHead = "", const char *pTail = "", const char *pPer = "", const char *pSuf = "")
+	const char *pHead = "", const char *pTail = "", const char *pPer = "", const char *pSuf = " ")
 {
 	fsPrint.Print("%s", pHead);
 
 	for (const auto &it : listCode)
 	{
-		fsPrint.Print("%s", pPer);
-		it.PrintToStream(fsPrint);
-		fsPrint.Print("%s", pSuf);
+		it.PrintToStream(fsPrint, pPer, pSuf);
 	}
 
 	fsPrint.Print("%s", pTail);

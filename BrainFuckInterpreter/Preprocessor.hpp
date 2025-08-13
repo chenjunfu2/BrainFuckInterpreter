@@ -767,13 +767,16 @@ private:
 
 		//因为至少要进行一次优化且必须要保证优化按顺序调用直到全部false
 		//所以避免短路求值问题，使用bool值保存
-		PrintCodeList(listCode, "", "\n");
+		PrintCodeList(listCode, "PreOptimization:", "\n");
 
 		while (true)
 		{
 			bool b0 = CountdownZeroOptimization(listCode);//先优化掉可以匹配的固定模式
+			PrintCodeList(listCode, "CountdownZeroOptimization:", "\n");
 			bool b1 = OperatorMergeOptimization(listCode);//接着进行操作去重优化
+			PrintCodeList(listCode, "OperatorMergeOptimization:", "\n");
 			bool b2 = InvalidLoopOptimization(listCode);//然后优化掉无效循环
+			PrintCodeList(listCode, "OperatorMergeOptimization:", "\n");
 
 			if (b0 || b1 || b2)//只要有任意一个成功，那么继续
 			{
