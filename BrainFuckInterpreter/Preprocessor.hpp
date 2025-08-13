@@ -541,7 +541,8 @@ private:
 			}
 
 			//记得移出codeBlockStack中被优化的loopbeg!!!
-			//不论是否存在优化情况，现在开始判断更前面有没有ZEROMEMORY标志，有的话，这个循环就可以全删了，完全不会执行的，哥们
+			//不论是否存在优化情况，现在开始判断更前面有没有ZEROMEMORY标志，
+			//有的话，这个连续或单个循环就可以全删了，完全不会执行的，哥们
 
 			if (szStackTop == 0 && codeBlockStack[szStackTop] == 0)
 			{//循环开头在最开始，默认内存单元初始值为0，循环也相当于从ZeroMem开始，完全被跳过
@@ -562,8 +563,7 @@ private:
 				continue;//继续循环
 			}
 			//判断szLastLoopBeg - 1也就是第一个szLastLoopBeg - szPrevLoopBeg != 1情况下的szLastLoopBeg前面是否有东西
-			if (szLastLoopBeg != 0 &&
-				listCode[szLastLoopBeg - 1].enSymbol == CodeUnit::Symbol::ZeroMem)
+			else if (szLastLoopBeg != 0 && listCode[szLastLoopBeg - 1].enSymbol == CodeUnit::Symbol::ZeroMem)
 			{
 				//下面不用移动优化了，全删了，但是不是真的删除，移动一下szLast到ZeroMem的位置，并且同时移动szCurrent即可懒惰删除
 
@@ -579,21 +579,12 @@ private:
 
 				continue;//继续for循环
 			}
-			
 
-
-
-			//执行到此：前面有个p的东西，或者根本不是ZeroMem，尝试优化重复无效循环
-
-			
-			//先移动szCurrent到前面匹配到的szNextLoopEnd位置 - 1
-			//后移动szLast到前面匹配到的szStackTop位置-1（如果有），
-			//如果没有（szStackTop为0），那么尝试操作新的szCurrent + 1拷贝到当前
-			//如果也没有（szCurrent + 1 >= szCodeSize），直接退出循环
+			//执行到此：前面有个p的东西，或者根本不是ZeroMem，尝试去掉重复无效循环
 
 			//到这里说明至少存在上一个不是循环头或下一个不是循环尾，也就是非相邻循环
 			//检查一下是否进行了头尾移动操作，如果确实没有移动，说明没有匹配成功，无需优化
-			if (szStackTop == )//完全没有移动
+			if (szStackTop == codeBlockStack.size() - 1)//完全没有移动
 			{
 				continue;//继续for循环
 			}
