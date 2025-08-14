@@ -325,7 +325,7 @@ private:
 	}
 	static bool CanMergePointerMove(const CodeUnit &testTargetCode, const CodeUnit &testSourceCode)
 	{
-		return testTargetCode.IsPointerMove() && testTargetCode.IsPointerMove();//都是指针操作
+		return testTargetCode.IsPointerMove() && testSourceCode.IsPointerMove();//都是指针操作
 	}
 	static bool IsDuplicates(const CodeUnit &testCode)//判断是否是需要去重的类型
 	{
@@ -754,6 +754,17 @@ private:
 		return;
 	}
 
+#ifdef _DEBUG
+
+#define Show(a,b,c) PrintCodeList((a),(b),(c))
+#define Info(a,...) printf((a),__VA_ARGS__);
+
+#else
+
+#define Show(a,b,c)
+#define Info(a,...)
+
+#endif // _DEBUG
 
 
 	static void Optimization(CodeList &listCode)
@@ -764,34 +775,36 @@ private:
 
 		//因为至少要进行一次优化且必须要保证优化按顺序调用直到全部false
 		//所以避免短路求值问题，使用bool值保存
-		PrintCodeList(listCode, "PreOptimization:", "\n");
+		Show(listCode, "PreOptimization: ", "\n");
 
-		printf("while\n");
+		Info("while\n");
 		while (true)
 		{
 			bool b0 = CountdownZeroOptimization(listCode);//先优化掉可以匹配的固定模式
-			PrintCodeList(listCode, "CountdownZeroOptimization:", "\n");
+			Show(listCode, "CountdownZeroOptimization: ", "\n");
 			bool b1 = OperatorMergeOptimization(listCode);//接着进行操作去重优化
-			PrintCodeList(listCode, "OperatorMergeOptimization:", "\n");
+			Show(listCode, "OperatorMergeOptimization: ", "\n");
 			bool b2 = InvalidLoopOptimization(listCode);//然后优化掉无效循环
-			PrintCodeList(listCode, "InvalidLoopOptimization:", "\n");
+			Show(listCode, "InvalidLoopOptimization: ", "\n");
 
 			if (b0 || b1 || b2)//只要有任意一个成功，那么继续
 			{
-				printf("continue\n");
+				Info("continue\n");
 				continue;
 			}
 
 			//否则直接跳出
 			break;
 		}
-		printf("break\n");
+		Info("break\n");
 
 		LoopSettingAndOptimization(listCode);//最后进行循环跳转位置匹配与连续尾部跳转优化
-		PrintCodeList(listCode, "LoopSettingAndOptimization:", "\n");
+		Show(listCode, "LoopSettingAndOptimization: ", "\n");
 		return;
 	}
 
+#undef Info
+#undef Show
 
 public:
 

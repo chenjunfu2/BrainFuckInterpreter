@@ -92,8 +92,8 @@ public:
 		exe.Loop();
 	}
 
-	void Print(void)
+	void Print(const char *pHead = "", const char *pTail = "", const char *pPer = "", const char *pSuf = " ")
 	{
-		PrintCodeList(exe.GetListCode());
+		PrintCodeList(exe.GetListCode(), pHead, pTail, pPer, pSuf);
 	}
 };

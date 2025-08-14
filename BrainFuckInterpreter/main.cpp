@@ -31,8 +31,10 @@ void PrintHelp(void)
 		"   - 选项开头符号-与/等价\n"\
 		"\n"\
 		"命令行选项：\n"\
-		"   SELF [-g] ([-f {FileName}]/[-a {Input}]/[-i])\n"\
+		"   SELF [-g/-o/-s] ([-f {FileName}]/[-a {Input}]/[-i])\n"\
 		"      -g        忽略未知字符，不报错\n"\
+		"      -o        对代码进行优化\n"\
+		"      -s        输出优化后的代码\n"\
 		"      -f        从文件中打开并运行BF代码\n"\
 		"      -a        从参数中输入并运行BF代码\n"\
 		"      -i        从标准流中输入并运行BF代码\n"\
@@ -59,9 +61,13 @@ int main(int argc, const char *argv[])
 
 	//判断命令行选项
 	bool bGetG = false;
+	bool bGetO = false;
+	bool bGetS = false;
 	bool bGetFAI = false;
 
 	bool bIgnoreUnknownChar = false;
+	bool bOptimization = false;
+	bool bShowCode = false;
 
 	Interpreter::StreamType sType = Interpreter::StreamType::Unknown;
 
@@ -86,6 +92,26 @@ int main(int argc, const char *argv[])
 				}
 
 				bIgnoreUnknownChar = true;
+			}
+			break;
+		case 'o':
+			{
+				if (bGetO != false)
+				{
+					goto Error;
+				}
+
+				bOptimization = true;
+			}
+			break;
+		case 's':
+			{
+				if (bGetS != false)
+				{
+					goto Error;
+				}
+
+				bShowCode = true;
 			}
 			break;
 		case 'f'://输入为文件
@@ -168,9 +194,13 @@ int main(int argc, const char *argv[])
 
 	try
 	{
-		Interpreter itp(pInput, sType, bIgnoreUnknownChar, true);
+		Interpreter itp(pInput, sType, bIgnoreUnknownChar, bOptimization);
+		if (bShowCode)
+		{
+			itp.Print("代码显示: ", "\n\n");
+		}
+
 		itp.Run();
-		//itp.Print();
 	}
 	catch (const std::bad_alloc &e)
 	{
