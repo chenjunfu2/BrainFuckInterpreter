@@ -283,13 +283,16 @@ private:
 
 			MyAssert(!codeBlockStack.empty(), "优化失败：块语句栈意外为空！");//怎么会这样呢？明明前面已经匹配完成了呢？
 
+			//到这里已经遇到任意与loopbeg匹配的loopend，现在保存栈顶值然后弹出以便平栈
+			size_t szNewLast = codeBlockStack.back();
+			codeBlockStack.pop_back();
+
 			//现在遇到了一个LoopEnd
 			//查看codeBlockStack栈顶，检查与之匹配的LoopBeg索引与当前LoopEnd的差值
 			//如果差值刚好为2则代表可能匹配到[x]序列，判断x的类型，然后决策
-			if (szLast - codeBlockStack.back() != 2)
+			if (szLast - szNewLast != 2)
 			{
-				//并不是2，那么，弹出跳过
-				codeBlockStack.pop_back();
+				//并不是2，那么，继续循环
 				continue;
 			}
 
@@ -300,15 +303,13 @@ private:
 				//非常棒，这就是需要优化的部分
 				bIsOptimization = true;//标记一下成功进行了至少一次优化
 
-				size_t szNewLast = codeBlockStack.back();
-				codeBlockStack.pop_back();
 				//内存布局举例如下：
 				//>  [  +  ]  x  x  <
 				//3  4  5  6  7  8  9
 				//   ^     ^     ^
 				//  top   lst   cur 
 
-				//现在szNewLast就是top
+				//现在szNewLast就是之前的top
 				//将szNewLast的Symbol变为ZeroMem
 				listCode[szNewLast].enSymbol = CodeUnit::Symbol::ZeroMem;
 				listCode[szNewLast].szMovOffset = 0;//归零无用内存
