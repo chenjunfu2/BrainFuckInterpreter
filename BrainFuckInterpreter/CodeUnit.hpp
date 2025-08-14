@@ -97,7 +97,6 @@ public:
 				return ACT_szJmpIndex;
 			}
 			break;
-		
 		case Symbol::ProgEnd:
 		case Symbol::OptCur:
 		case Symbol::IptCur:
@@ -116,6 +115,21 @@ public:
 		}
 
 		return ACT_Unknown;
+	}
+
+	bool IsOperator(void) const//判断是否是数值运算类型
+	{
+		return enSymbol == Symbol::AddCur || enSymbol == Symbol::SubCur;
+	}
+
+	bool IsPointerMove(void) const//判断是否是指针运算类型
+	{
+		return enSymbol == Symbol::NextMov || enSymbol == Symbol::PrevMov;
+	}
+
+	bool IsZeroMem(void) const//判断是否是内存置0操作
+	{
+		return enSymbol == Symbol::ZeroMem;
 	}
 	
 public:

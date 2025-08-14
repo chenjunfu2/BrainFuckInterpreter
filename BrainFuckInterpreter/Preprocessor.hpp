@@ -218,32 +218,17 @@ private:
 
 
 	//判断是否拥有足够多的打码来进行优化，至少2个。为什么要+1？因为有结尾哨兵标记ProgEnd占用1空间
-	static bool ContainsEnoughCode(CodeList &listCode)
+	static bool ContainsEnoughCode(const CodeList &listCode)
 	{
 		return listCode.size() >= 2 + 1;
 	}
-	static bool IsOperator(CodeUnit::Symbol enSym)//判断是否是数值运算类型
-	{
-		return enSym == CodeUnit::Symbol::AddCur || enSym == CodeUnit::Symbol::SubCur;
-	}
-	static bool IsPointerMove(CodeUnit::Symbol enSym)//判断是否是指针运算类型
-	{
-		return enSym == CodeUnit::Symbol::NextMov || enSym == CodeUnit::Symbol::PrevMov;
-	}
-	static bool IsZeroMem(CodeUnit::Symbol enSym)
-	{
-		return enSym == CodeUnit::Symbol::ZeroMem;
-	}
-	static bool IsDuplicateRemoval(CodeUnit::Symbol enSym)//判断是否是需要去重的代码类型
-	{
-		return IsZeroMem(enSym);
-	}
 
-	static bool CanChangeToZeroMem(CodeUnit::Symbol enSym)//判断是否是需要优化为内存置0操作
+	static bool CanChangeToZeroMem(const CodeUnit &testCode)//判断是否是需要优化为内存置0操作
 	{
-		return IsOperator(enSym) || IsZeroMem(enSym);
+		//如果是操作运算则必须保证u8CalcValue是1，否则可能导致[++]之类的操作被优化而不符合预期
+		return (testCode.IsOperator() && testCode.u8CalcValue == 1) ||
+				testCode.IsZeroMem();//置0内存，直接允许
 	}
-
 
 	/*
 	循环倒数置0优化：先匹配[-]或[+]形式，替换为Z，
@@ -297,8 +282,7 @@ private:
 			}
 
 			//很好，现在匹配一下内部的符号类型
-			if (CanChangeToZeroMem(listCode[szLast - 1].enSymbol) &&
-				listCode[szLast - 1].u8CalcValue == 1)//必须保证u8CalcValue是1，否则可能导致[++]之类的操作不符合预期
+			if (CanChangeToZeroMem(listCode[szLast - 1]))
 			{
 				//非常棒，这就是需要优化的部分
 				bIsOptimization = true;//标记一下成功进行了至少一次优化
@@ -335,17 +319,21 @@ private:
 		return bIsOptimization;
 	}
 
-	static bool CanMergeOperator(CodeUnit::Symbol enTargetiSym, CodeUnit::Symbol enSourceSym)
+	static bool CanMergeOperator(const CodeUnit& testTargetCode, const CodeUnit &testSourceCode)
 	{
-		return	IsOperator(enTargetiSym) && IsOperator(enSourceSym);//都是运算符
+		return	testTargetCode.IsOperator() && testSourceCode.IsOperator();//都是运算符
 	}
-	static bool CanMergePointerMove(CodeUnit::Symbol enTargetiSym, CodeUnit::Symbol enSourceSym)
+	static bool CanMergePointerMove(const CodeUnit &testTargetCode, const CodeUnit &testSourceCode)
 	{
-		return IsPointerMove(enTargetiSym) && IsPointerMove(enSourceSym);//都是指针操作
+		return testTargetCode.IsPointerMove() && testTargetCode.IsPointerMove();//都是指针操作
 	}
-	static bool HasDuplicates(CodeUnit::Symbol enTargetiSym, CodeUnit::Symbol enSourceSym)
+	static bool IsDuplicates(const CodeUnit &testCode)//判断是否是需要去重的类型
 	{
-		return IsDuplicateRemoval(enTargetiSym) && enTargetiSym == enSourceSym;//都是需要去重的类型并且相等
+		return testCode.IsZeroMem();
+	}
+	static bool HasDuplicates(const CodeUnit &testTargetCode, const CodeUnit &testSourceCode)
+	{
+		return IsDuplicates(testTargetCode) && testTargetCode.enSymbol == testSourceCode.enSymbol;//都是需要去重的类型并且相等
 	}
 
 
@@ -402,7 +390,7 @@ private:
 			auto &cuLast = listCode[szLast];
 			auto &cuCurrent = listCode[szCurrent];
 			
-			if (CanMergeOperator(cuLast.enSymbol, cuCurrent.enSymbol))//合并运算符
+			if (CanMergeOperator(cuLast, cuCurrent))//合并运算符
 			{
 				bIsOptimization = true;//标记一下
 				if (MergeOperator(cuLast.enSymbol, cuLast.u8CalcValue, cuCurrent.enSymbol, cuCurrent.u8CalcValue))
@@ -411,7 +399,7 @@ private:
 				}
 				//合并抵消，走外部处理
 			}
-			else if (CanMergePointerMove(cuLast.enSymbol, cuCurrent.enSymbol))//合并指针移动
+			else if (CanMergePointerMove(cuLast, cuCurrent))//合并指针移动
 			{
 				bIsOptimization = true;//标记一下
 				if (MergeOperator(cuLast.enSymbol, cuLast.szMovOffset, cuCurrent.enSymbol, cuCurrent.szMovOffset))
@@ -420,7 +408,7 @@ private:
 				}
 				//合并抵消，走外部处理
 			}
-			else if (HasDuplicates(cuLast.enSymbol, cuCurrent.enSymbol))//去重操作
+			else if (HasDuplicates(cuLast, cuCurrent))//去重操作，重复的直接删除，而不是合并
 			{
 				bIsOptimization = true;//标记一下
 				continue;//直接继续直到任意一个不匹配
