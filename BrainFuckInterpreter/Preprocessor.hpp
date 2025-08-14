@@ -770,6 +770,7 @@ private:
 		//所以避免短路求值问题，使用bool值保存
 		PrintCodeList(listCode, "PreOptimization:", "\n");
 
+		printf("while\n");
 		while (true)
 		{
 			bool b0 = CountdownZeroOptimization(listCode);//先优化掉可以匹配的固定模式
@@ -788,8 +789,10 @@ private:
 			//否则直接跳出
 			break;
 		}
+		printf("break\n");
 
 		LoopSettingAndOptimization(listCode);//最后进行循环跳转位置匹配与连续尾部跳转优化
+		PrintCodeList(listCode, "LoopSettingAndOptimization:", "\n");
 		return;
 	}
 

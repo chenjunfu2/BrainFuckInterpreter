@@ -11,11 +11,11 @@ inline void __MyAssert_Function__(const char *pFileName, size_t szLine, const ch
 		return;//校验成功返回
 	}
 
-	printf("Assertion Failure!\n    in file: %s\n    in line: %zu\n    in func: %s\n    in info: ", pFileName, szLine, pFunctionName);
+	fprintf(stderr, "Assertion Failure!\n    in file: %s\n    in line: %zu\n    in func: %s\n    in info: ", pFileName, szLine, pFunctionName);
 	
 	va_list vl;
 	va_start(vl, pInfo);
-	vprintf(pInfo, vl);
+	vfprintf(stderr, pInfo, vl);
 	va_end(vl);
 	//帮忙换行
 	putchar('\n');
