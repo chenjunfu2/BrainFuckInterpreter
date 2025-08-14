@@ -152,7 +152,6 @@
     <ClCompile Include="main.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="ConsoleStream.hpp" />
     <ClInclude Include="Interpreter.hpp" />
     <ClInclude Include="CodeUnit.hpp" />
     <ClInclude Include="Executor.hpp" />

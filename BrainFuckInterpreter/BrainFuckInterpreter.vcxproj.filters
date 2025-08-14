@@ -38,9 +38,6 @@
     <ClInclude Include="FileStream.hpp">
       <Filter>头文件</Filter>
     </ClInclude>
-    <ClInclude Include="ConsoleStream.hpp">
-      <Filter>头文件</Filter>
-    </ClInclude>
     <ClInclude Include="IO.hpp">
       <Filter>头文件</Filter>
     </ClInclude>

@@ -17,7 +17,7 @@ private:
 	MemoryManager mMemory{};
 public:
 	Executor(void) = default;
-	Executor(CodeList _listCode, size_t _szCodeListIP = 0, MemoryManager _mMemory = {}, IO _io = {}) :szCodeListIP(_szCodeListIP), io(_io), listCode(std::move(_listCode)), mMemory(std::move(_mMemory))
+	Executor(CodeList _listCode, size_t _szCodeListIP = 0, IO _io = {}, MemoryManager _mMemory = {}) :szCodeListIP(_szCodeListIP), io(std::move(_io)), listCode(std::move(_listCode)), mMemory(std::move(_mMemory))
 	{}
 	~Executor(void) = default;
 
@@ -39,6 +39,11 @@ public:
 		mMemory = std::move(_Move.mMemory);
 	}
 
+	void SetIO(IO _io)
+	{
+		io = std::move(_io);
+	}
+
 	void SetMemory(MemoryManager _mMemory)
 	{
 		mMemory = std::move(_mMemory);
@@ -53,6 +58,11 @@ public:
 	void ResetMemory(void)
 	{
 		mMemory.Reset();
+	}
+
+	const IO &GetIO(void)
+	{
+		return io;
 	}
 
 	const MemoryManager &GetMemory(void)
