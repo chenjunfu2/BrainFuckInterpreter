@@ -657,8 +657,11 @@ private:
 			}
 
 			//设置当前位置与上一位置
+			//szNextLoopEnd - 1以便应对for递增，这样szCurrent下一次就是szNextLoopEnd
 			szCurrent = szNextLoopEnd - 1;
-			szLast -= szNearLoopBeg;
+			//szNearLoopBeg - szLastLoopBeg算出块往左的移动量，以便移动last到原先的尾部，
+			//然后在for下一次递增后移动到尾后进行移动赋值，符合预期
+			szLast -= (szNearLoopBeg - szLastLoopBeg);
 
 			//设置栈，大小为szStackTop相当于让codeBlockStack.back()在szLastLoopBeg的前面一个[位置
 			codeBlockStack.resize(szStackTop);
@@ -749,6 +752,11 @@ private:
 
 			//弹出直到szStackOptimizationBeg的位置，注意这样会不包含当前szStackOptimizationBeg指向的值
 			codeBlockStack.resize(szStackOptimizationBeg);
+
+			//设置当前到新的位置，跳过已经匹配的连续loopbeg
+			//为什么要-1？因为前面listCode的szNewCurrent只是不是LoopEnd，但是有可能是LoopBeg，
+			//需要让for递增szCurrent判断当前，所以这里-1让for开头判断一下
+			szCurrent = szNewCurrent - 1;
 
 			continue;//配对完成，继续循环
 		}
