@@ -46,10 +46,11 @@ private:
 
 	void CheckExpand(size_t szMoveSize)
 	{
-		if (szIndex + szMoveSize >= szSize)
-		{
-			Expand(szIndex + szMoveSize);
-		}
+		//计算移动后新的大小，注意需要+1因为是从索引计算来的
+		//size就是索引+1得到的，而现在的szMoveSize是索引增量
+		//也要加入确保扩容判断
+		size_t szNewSize = szIndex + szMoveSize + 1;
+		Expand(szNewSize);//直接尝试扩容，如果新的大小小于当前则不会触发
 	}
 
 	void Expand(size_t szNewSize)//扩容

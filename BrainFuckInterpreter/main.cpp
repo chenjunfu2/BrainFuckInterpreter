@@ -4,7 +4,7 @@
 #include <new>
 
 #define PROJECT "BrainFuckInterpreter"
-#define VERSION "1.0.4"
+#define VERSION "1.0.5"
 
 #define COPYRIGHT "Copyright(C)"
 #define YEAR "2025"
@@ -211,3 +211,10 @@ int main(int argc, const char *argv[])
 	putchar('\n');
 	return 0;
 }
+
+/*
+TODO:
+调试模式，@代码内显示断点，允许多种执行方式，查看内存
+编译为中间码并保存到文件，从中间码文件中执行
+支持从文件中重定向输入给bf程序，bf程序输出重定向到文件中
+*/

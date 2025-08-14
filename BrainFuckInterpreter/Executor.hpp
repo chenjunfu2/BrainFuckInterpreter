@@ -70,7 +70,7 @@ public:
 		return szCodeListIP;
 	}
 
-	bool Once(void)
+	bool Once(void)//返回true代表还能继续执行，false代表执行结束
 	{
 		if (szCodeListIP >= listCode.size())
 		{
