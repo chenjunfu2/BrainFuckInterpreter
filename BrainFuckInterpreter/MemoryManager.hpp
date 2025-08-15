@@ -144,7 +144,7 @@ public:
 	MemoryManager &operator+=(size_t szMoveSize)
 	{
 		CheckExpand(szMoveSize);//自动扩容
-		MyAssert(szIndex + szMoveSize + 1 <= szSize, "致命错误：扩容失败，指针向后越界！");//防止向后越界
+		MyAssert(szIndex + szMoveSize + 1 <= szSize, "致命错误：扩容失败，内存指针向后越界！");//防止向后越界
 
 		szIndex += szMoveSize;
 		return *this;
