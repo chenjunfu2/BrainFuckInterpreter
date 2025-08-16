@@ -152,6 +152,7 @@
     <ClCompile Include="main.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="CommandLineParser.hpp" />
     <ClInclude Include="Interpreter.hpp" />
     <ClInclude Include="CodeUnit.hpp" />
     <ClInclude Include="Executor.hpp" />
