@@ -152,7 +152,11 @@ public:
 
 	MemoryManager &operator-=(size_t szMoveSize)
 	{
-		MyAssert(szMoveSize <= szIndex, "致命错误：内存指针尝试向前越界！");//防止向前越界
+		if (szMoveSize > szIndex)//防止向前越界
+		{
+			printf("致命错误：内存指针尝试向前越界！\n");
+			exit(0);//此处不应用断言，断言应尽可能只涉及仅内部错误
+		}
 
 		szIndex -= szMoveSize;
 		return *this;
@@ -170,12 +174,14 @@ public:
 
 	uint8_t &operator*(void)//解引用
 	{
-		return pBase[szIndex];//szIndex在其他地方保证不越界，无需检查
+		MyAssert(szIndex < szSize, "致命错误：索引向后越界！");//size_t类型无符号，不存在负数越界，只需检查向后越界即可
+		return pBase[szIndex];
 	}
 
-	uint8_t &operator[](size_t szIndexNoCheck)//危险
+	uint8_t &operator[](size_t szNewIndex)
 	{
-		return pBase[szIndexNoCheck];
+		MyAssert(szIndex < szSize, "致命错误：索引向后越界！");//size_t类型无符号，不存在负数越界，只需检查向后越界即可
+		return pBase[szNewIndex];
 	}
 
 	operator bool(void)
@@ -188,8 +194,9 @@ public:
 		return szIndex;
 	}
 
-	void SetIndex(size_t szIndexNoCheck)//危险
+	void SetIndex(size_t szNewIndex)
 	{
-		szIndex = szIndexNoCheck;
+		MyAssert(szNewIndex < szSize, "致命错误：索引向后越界！");//size_t类型无符号，不存在负数越界，只需检查向后越界即可
+		szIndex = szNewIndex;
 	}
 };
