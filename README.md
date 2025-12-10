@@ -1,5 +1,10 @@
 # BrainFuckInterpreter
-一个简易的BrainFuck解释器</br>
+动态BrainFuck解释器</br>
+这个项目是BF动态解释器，使用C++编写</br>
+如果你需要的是BF直接映射到C++语言的转换器（某种程度上算编译器？），可以前往我的另一个项目：</br>
+[https://github.com/chenjunfu2/BrainFuck](https://github.com/chenjunfu2/BrainFuck)</br>
+
+# 用法介绍
 使用命令行启动程序，执行完毕后自动退出</br>
 <pre>
 命令行说明：
